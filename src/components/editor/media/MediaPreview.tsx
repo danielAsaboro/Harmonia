@@ -136,7 +136,7 @@ export default function MediaPreview({
             onClick={(e) => e.stopPropagation()}
           >
             {isImageUrl(fullscreenMedia) ? (
-              <Image
+              <img
                 src={fullscreenMedia}
                 alt={`Fullscreen media ${currentFullscreenIndex + 1}`}
                 className="max-w-full max-h-[90vh] object-contain"
