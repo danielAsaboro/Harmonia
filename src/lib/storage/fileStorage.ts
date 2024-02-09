@@ -84,13 +84,15 @@ export class FileStorage {
       const storedFileName = fileName
         ? `${fileId}-${fileName}`
         : `${fileId}.${extension}`;
+      // const storedFileName = `${fileId}.${extension}`;
 
       const filePath = join(userDir, storedFileName);
       await writeFile(filePath, file);
 
       return {
         path: filePath,
-        id: fileId,
+        // id: fileId,
+        id: storedFileName,
       };
     } catch (error) {
       if (error instanceof FileStorageError) {

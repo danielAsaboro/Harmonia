@@ -49,7 +49,7 @@ const repurposeThread = (
   const newTweets = tweets.map((tweet, index) => ({
     id: `tweet-${uuidv4()}`,
     content: tweet.content,
-    media: [...(tweet.mediaIds || [])],
+    mediaIds: [...(tweet.mediaIds || [])],
     createdAt: new Date(),
     status: "draft" as const,
     threadId: newThreadId,
@@ -242,7 +242,7 @@ export default function PlayGround({
           ...newTweets[0],
           id: currentId,
           content: "",
-          media: [],
+          mediaIds: [],
           createdAt: new Date(),
           status: "draft" as const,
           threadId: undefined,
@@ -490,7 +490,7 @@ export default function PlayGround({
       const newTweet = {
         id: `tweet-${uuidv4()}`,
         content: "",
-        media: [],
+        mediaIds: [],
         createdAt: new Date(),
         status: "draft" as const,
         threadId: newThreadId,
@@ -504,7 +504,7 @@ export default function PlayGround({
       const newTweet = {
         id: `tweet-${uuidv4()}`,
         content: "",
-        media: [],
+        mediaIds: [],
         createdAt: new Date(),
         status: "draft" as const,
         threadId: threadId || `thread-${uuidv4()}`,
@@ -664,7 +664,7 @@ export default function PlayGround({
           }
           return {
             content: tweet.content,
-            media: mediaUrls,
+            mediaIds: mediaUrls,
           };
         })
       );

@@ -59,6 +59,8 @@ export async function POST(req: NextRequest) {
     const { type, data } = body;
     const now = new Date().toISOString();
 
+    console.log("   ", data);
+
     if (type === "tweet") {
       const tweet = {
         ...data,
@@ -145,7 +147,10 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
     const id = searchParams.get("id");
-    const cleanup = searchParams.get("cleanup") === "true";
+    // const cleanup = searchParams.get("cleanup") === "true";
+    const cleanup = true;
+
+    console.log("clean up is activated ", cleanup);
 
     if (!type || !id) {
       return NextResponse.json(
@@ -160,7 +165,7 @@ export async function DELETE(req: NextRequest) {
         const tweet = db.getDraftTweet(id, userData.userId);
 
         if (tweet && tweet.mediaIds) {
-          // Delete media files
+          // Delete media files|
           await Promise.allSettled(
             // JSON.parse(tweet.mediaIds)
             tweet.mediaIds.map((mediaId: string) =>

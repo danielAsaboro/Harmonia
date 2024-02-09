@@ -235,7 +235,7 @@ class DatabaseService {
     const rows = stmt.all(userId) as any[];
     return rows.map((row) => ({
       ...row,
-      media: JSON.parse(row.mediaIds || "[]"),
+      mediaIds: JSON.parse(row.mediaIds || "[]"),
       tags: JSON.parse(row.tags || "[]"),
     }));
   }
@@ -322,7 +322,7 @@ class DatabaseService {
       },
       tweets: tweets.map((tweet) => ({
         ...tweet,
-        media: JSON.parse(tweet.mediaIds || "[]"),
+        mediaIds: JSON.parse(tweet.mediaIds || "[]"),
         tags: JSON.parse(tweet.tags || "[]"),
       })),
     };
@@ -353,7 +353,7 @@ class DatabaseService {
       },
       tweets: tweetsStmt.all(thread.id).map((tweet: any) => ({
         ...tweet,
-        media: JSON.parse(tweet.mediaIds || "[]"),
+        mediaIds: JSON.parse(tweet.mediaIds || "[]"),
         tags: JSON.parse(tweet.tags || "[]"),
       })),
     }));
