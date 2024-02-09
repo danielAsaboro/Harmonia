@@ -96,9 +96,7 @@ function WelcomeScreen() {
         <h1 className="text-2xl font-bold text-white">{getWelcomeTitle()}</h1>
         <p className="text-gray-400 max-w-md">{getWelcomeDescription()}</p>
         <button
-          onClick={() =>
-            showEditor(latestDraft?.id)
-          }
+          onClick={() => showEditor(latestDraft?.id)}
           className="px-6 py-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-medium"
         >
           {existingDrafts.length === 0
@@ -115,7 +113,7 @@ function TwitterEditorContent() {
   const { isLoading } = useUserAccount();
 
   const userAccount = useUserAccount();
-  console.log("User Account Context:", userAccount);
+  // console.log("User Account Context:", userAccount);
 
   useEffect(() => {
     console.log("Current user account loading state:", userAccount.isLoading);

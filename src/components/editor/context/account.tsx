@@ -42,7 +42,7 @@ export function UserAccountProvider({
     </div>
   );
 
-  console.log("number of times user endpoint called, ", count);
+  // console.log("number of times user endpoint called, ", count);
 
   // Error avatar component
   const ErrorAvatar = () => (
