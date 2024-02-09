@@ -68,8 +68,8 @@ export class TweetStorageService {
   // USER DETAILS
   getUserDetails(): TwitterUserDetails | null {
     try {
-      console.log("trying to fetch user details");
-      console.log("user details key: ", this.USER_DETAILS_KEY);
+      // console.log("trying to fetch user details");
+      // console.log("user details key: ", this.USER_DETAILS_KEY);
       const details = localStorage.getItem(this.USER_DETAILS_KEY);
 
       // Parse details and check if it's a valid, non-empty object
@@ -81,7 +81,7 @@ export class TweetStorageService {
         }
       }
 
-      console.log("No user details found");
+      // console.log("No user details found");
       return null;
     } catch (error) {
       console.error("Error getting user details:", error);
