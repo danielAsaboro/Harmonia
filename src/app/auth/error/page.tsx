@@ -2,8 +2,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function AuthError() {
+function AuthError() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const message = searchParams.get("message");
@@ -55,5 +56,13 @@ export default function AuthError() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense>
+      <AuthError />
+    </Suspense>
   );
 }

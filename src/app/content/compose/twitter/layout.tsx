@@ -99,7 +99,7 @@ function EditorSidebar() {
       (item) =>
         !("tweetIds" in item) &&
         !item.content?.trim() &&
-        (!item.media || item.media.length === 0)
+        (!item.mediaIds || item.mediaIds.length === 0)
     );
 
     if (emptyDraft) {
@@ -189,7 +189,8 @@ function EditorSidebar() {
                     currentDraft &&
                     !currentDraft.threadId &&
                     !currentDraft.content.trim() &&
-                    (!currentDraft.media || currentDraft.media.length === 0)
+                    (!currentDraft.mediaIds ||
+                      currentDraft.mediaIds.length === 0)
                   ) {
                     showEditor(currentDraft?.id, "tweet");
                     return;
@@ -368,9 +369,9 @@ export default function RootLayout({
       <UserAccountProvider>
         <EditorProvider>
           <AuthErrorHandler>
-            <React.Suspense fallback={<LoadingState />}>
+            <Suspense fallback={<LoadingState />}>
               <WholeEditor>{children}</WholeEditor>
-            </React.Suspense>
+            </Suspense>
           </AuthErrorHandler>
         </EditorProvider>
       </UserAccountProvider>

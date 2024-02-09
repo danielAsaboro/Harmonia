@@ -6,6 +6,8 @@ import {
   ScheduledThread,
   UserTokens,
   initializeDatabase,
+  DraftTweet,
+  DraftThread,
 } from "./schema";
 
 class DatabaseService {
@@ -184,6 +186,194 @@ class DatabaseService {
     `);
 
     stmt.run(status, error || null, id);
+  }
+
+  // Draft Tweet Operations
+  saveDraftTweet(tweet: DraftTweet): void {
+    const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO draft_tweets 
+        (id, content, mediaIds, createdAt, updatedAt, status, threadId, position, tags, userId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      tweet.id,
+      tweet.content,
+      JSON.stringify(tweet.mediaIds || []),
+      tweet.createdAt,
+      tweet.updatedAt,
+      tweet.status,
+      tweet.threadId || null,
+      tweet.position || null,
+      JSON.stringify(tweet.tags || []),
+      tweet.userId
+    );
+  }
+
+  getDraftTweet(id: string, userId: string): DraftTweet | null {
+    const stmt = this.db.prepare(`
+        SELECT * FROM draft_tweets WHERE id = ? AND userId = ?
+    `);
+
+    const row = stmt.get(id, userId) as any;
+    if (!row) return null;
+
+    return {
+      ...row,
+      mediaIds: JSON.parse(row.mediaIds || "[]"),
+      tags: JSON.parse(row.tags || "[]"),
+    };
+  }
+
+  getUserDraftTweets(userId: string): DraftTweet[] {
+    const stmt = this.db.prepare(`
+        SELECT * FROM draft_tweets 
+        WHERE userId = ? AND threadId IS NULL 
+        ORDER BY updatedAt DESC
+    `);
+
+    const rows = stmt.all(userId) as any[];
+    return rows.map((row) => ({
+      ...row,
+      media: JSON.parse(row.mediaIds || "[]"),
+      tags: JSON.parse(row.tags || "[]"),
+    }));
+  }
+
+  deleteDraftTweet(id: string, userId: string): void {
+    const stmt = this.db.prepare(`
+        DELETE FROM draft_tweets WHERE id = ? AND userId = ?
+    `);
+
+    stmt.run(id, userId);
+  }
+
+  // Draft Thread Operations
+  saveDraftThread(thread: DraftThread, tweets: DraftTweet[]): void {
+    const threadStmt = this.db.prepare(`
+        INSERT OR REPLACE INTO draft_threads 
+        (id, tweetIds, createdAt, updatedAt, status, tags, userId)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const tweetStmt = this.db.prepare(`
+        INSERT OR REPLACE INTO draft_tweets 
+        (id, content, mediaIds, createdAt, updatedAt, status, threadId, position, tags, userId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    // Use a transaction to ensure all operations succeed or fail together
+    const transaction = this.db.transaction(
+      (thread: DraftThread, tweets: DraftTweet[]) => {
+        threadStmt.run(
+          thread.id,
+          JSON.stringify(thread.tweetIds),
+          thread.createdAt,
+          thread.updatedAt,
+          thread.status,
+          JSON.stringify(thread.tags || []),
+          thread.userId
+        );
+
+        tweets.forEach((tweet) => {
+          tweetStmt.run(
+            tweet.id,
+            tweet.content,
+            JSON.stringify(tweet.mediaIds || []),
+            tweet.createdAt,
+            tweet.updatedAt,
+            tweet.status,
+            thread.id,
+            tweet.position,
+            JSON.stringify(tweet.tags || []),
+            tweet.userId
+          );
+        });
+      }
+    );
+
+    transaction(thread, tweets);
+  }
+
+  getDraftThread(
+    id: string,
+    userId: string
+  ): { thread: DraftThread; tweets: DraftTweet[] } | null {
+    const threadStmt = this.db.prepare(`
+        SELECT * FROM draft_threads WHERE id = ? AND userId = ?
+    `);
+
+    const tweetsStmt = this.db.prepare(`
+        SELECT * FROM draft_tweets 
+        WHERE threadId = ? 
+        ORDER BY position ASC
+    `);
+
+    const thread = threadStmt.get(id, userId) as any;
+    if (!thread) return null;
+
+    const tweets = tweetsStmt.all(id) as any[];
+
+    return {
+      thread: {
+        ...thread,
+        tweetIds: JSON.parse(thread.tweetIds),
+        tags: JSON.parse(thread.tags || "[]"),
+      },
+      tweets: tweets.map((tweet) => ({
+        ...tweet,
+        media: JSON.parse(tweet.mediaIds || "[]"),
+        tags: JSON.parse(tweet.tags || "[]"),
+      })),
+    };
+  }
+
+  getUserDraftThreads(
+    userId: string
+  ): { thread: DraftThread; tweets: DraftTweet[] }[] {
+    const threadStmt = this.db.prepare(`
+        SELECT * FROM draft_threads 
+        WHERE userId = ? 
+        ORDER BY updatedAt DESC
+    `);
+
+    const tweetsStmt = this.db.prepare(`
+        SELECT * FROM draft_tweets 
+        WHERE threadId = ? 
+        ORDER BY position ASC
+    `);
+
+    const threads = threadStmt.all(userId) as any[];
+
+    return threads.map((thread) => ({
+      thread: {
+        ...thread,
+        tweetIds: JSON.parse(thread.tweetIds),
+        tags: JSON.parse(thread.tags || "[]"),
+      },
+      tweets: tweetsStmt.all(thread.id).map((tweet: any) => ({
+        ...tweet,
+        media: JSON.parse(tweet.mediaIds || "[]"),
+        tags: JSON.parse(tweet.tags || "[]"),
+      })),
+    }));
+  }
+
+  deleteDraftThread(id: string, userId: string): void {
+    const deleteThreadStmt = this.db.prepare(`
+        DELETE FROM draft_threads WHERE id = ? AND userId = ?
+    `);
+
+    const deleteTweetsStmt = this.db.prepare(`
+        DELETE FROM draft_tweets WHERE threadId = ?
+    `);
+
+    const transaction = this.db.transaction((id: string, userId: string) => {
+      deleteTweetsStmt.run(id);
+      deleteThreadStmt.run(id, userId);
+    });
+
+    transaction(id, userId);
   }
 }
 

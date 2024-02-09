@@ -35,8 +35,8 @@ export default function ThreadPreview({
     const loadMediaUrls = async () => {
       const urls: Record<string, string | null> = {};
       for (const tweet of tweets) {
-        if (tweet.media && tweet.media.length > 0) {
-          for (const mediaId of tweet.media) {
+        if (tweet.mediaIds && tweet.mediaIds.length > 0) {
+          for (const mediaId of tweet.mediaIds) {
             urls[mediaId] = await getMediaUrl(mediaId);
           }
         }
@@ -94,9 +94,9 @@ export default function ThreadPreview({
                     {tweet.content || "Empty tweet"}
                   </div>
 
-                  {tweet.media && tweet.media.length > 0 && (
+                  {tweet.mediaIds && tweet.mediaIds.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      {tweet.media.map((mediaId, mediaIndex) => {
+                      {tweet.mediaIds.map((mediaId, mediaIndex) => {
                         const url = mediaUrls[mediaId];
                         if (!url) return null;
 

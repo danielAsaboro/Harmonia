@@ -5,7 +5,7 @@ export type TweetStatus = "draft" | "scheduled" | "published";
 export interface Tweet {
   id: string;
   content: string;
-  media?: string[];
+  mediaIds?: string[];
   createdAt: Date;
   status: TweetStatus;
   scheduledFor?: Date;

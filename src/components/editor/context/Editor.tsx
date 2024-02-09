@@ -76,7 +76,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           const newTweet: Tweet = {
             id: newId,
             content: "",
-            media: [],
+            mediaIds: [],
             createdAt: new Date(),
             status: "draft",
           };

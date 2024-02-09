@@ -146,7 +146,7 @@ class MediaStorageService {
     return this.initPromise;
   }
 
-  async storeMediaFile(file: File): Promise<string> {
+  async storeMediaFile(mediaId: string, file: File): Promise<string> {
     console.log("[MediaStorage] Starting to store file:", {
       name: file.name,
       type: file.type,
@@ -162,7 +162,7 @@ class MediaStorageService {
 
     try {
       const db = await this.getDB();
-      const mediaId = uuidv4();
+      // const mediaId = uuidv4();
 
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -246,7 +246,7 @@ class MediaStorageService {
   }
 
   async getMediaFile(mediaId: string): Promise<string | null> {
-    console.log("[MediaStorage] Retrieving media file:", mediaId);
+    // console.log("[MediaStorage] Retrieving media file:", mediaId);
 
     if (!isBrowser) {
       console.warn("[MediaStorage] Not in browser environment");

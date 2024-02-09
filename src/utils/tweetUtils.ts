@@ -1,4 +1,4 @@
-import { Tweet, Thread,  } from "../types/tweet";
+import { Tweet, Thread } from "../types/tweet";
 
 const MAX_TWEET_LENGTH = 280;
 
@@ -35,7 +35,7 @@ export const createNewTweet = (
     status: "draft",
     threadId,
     position,
-    media: [],
+    mediaIds: [],
   };
 };
 

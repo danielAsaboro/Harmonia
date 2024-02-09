@@ -1,4 +1,5 @@
 // /utils/localStorage.ts
+import { draftSync } from "@/lib/sync/draftSync";
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { debounce } from "lodash";
 
@@ -184,12 +185,17 @@ export class TweetStorageService {
         tweets.push(tweet);
       }
 
+      // Always save to localStorage immediately
+      localStorage.setItem(this.TWEETS_KEY, JSON.stringify(tweets));
+      this.lastSave = Date.now();
+
+      // Queue for backend sync if it's a draft
+      if (tweet.status === "draft") {
+        draftSync.queueForSync(tweet.id, "tweet");
+      }
+
       if (immediate) {
-        localStorage.setItem(this.TWEETS_KEY, JSON.stringify(tweets));
-        this.lastSave = Date.now();
-      } else {
-        this.saveQueue.add(tweet.id);
-        this.debouncedSave();
+        draftSync.forceSyncNow();
       }
     } catch (error) {
       console.error("Error saving tweet:", error);
@@ -213,14 +219,25 @@ export class TweetStorageService {
         threads.push(thread);
       }
 
+      // Save thread to localStorage
       localStorage.setItem(this.THREADS_KEY, JSON.stringify(threads));
 
+      // Save associated tweets
       tweets.forEach((tweet) => {
         this.saveTweet(
           { ...tweet, threadId: thread.id, status: tweet.status },
-          immediate
+          false // Don't force immediate sync for individual tweets
         );
       });
+
+      // Queue thread for backend sync if it's a draft
+      if (thread.status === "draft") {
+        draftSync.queueForSync(thread.id, "thread");
+      }
+
+      if (immediate) {
+        draftSync.forceSyncNow();
+      }
     } catch (error) {
       console.error("Error saving thread:", error);
     }
@@ -234,6 +251,13 @@ export class TweetStorageService {
     try {
       const tweets = this.getTweets().filter((t) => t.id !== tweetId);
       localStorage.setItem(this.TWEETS_KEY, JSON.stringify(tweets));
+
+      // Send delete request to backend immediately
+      fetch(`/api/drafts?type=tweet&id=${tweetId}`, {
+        method: "DELETE",
+      }).catch((error) => {
+        console.error("Error deleting tweet from backend:", error);
+      });
     } catch (error) {
       console.error("Error deleting tweet:", error);
     }
@@ -250,6 +274,13 @@ export class TweetStorageService {
 
       const tweets = this.getTweets().filter((t) => t.threadId !== threadId);
       localStorage.setItem(this.TWEETS_KEY, JSON.stringify(tweets));
+
+      // Send delete request to backend immediately
+      fetch(`/api/drafts?type=thread&id=${threadId}`, {
+        method: "DELETE",
+      }).catch((error) => {
+        console.error("Error deleting thread from backend:", error);
+      });
     } catch (error) {
       console.error("Error deleting thread:", error);
     }

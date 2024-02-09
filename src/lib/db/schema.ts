@@ -2,6 +2,18 @@
 import Database from "better-sqlite3";
 import { Tweet, Thread } from "@/types/tweet";
 
+export interface DraftTweet extends Omit<Tweet, "createdAt"> {
+  createdAt: string;
+  userId: string;
+  updatedAt: string;
+}
+
+export interface DraftThread extends Omit<Thread, "createdAt"> {
+  createdAt: string;
+  userId: string;
+  updatedAt: string;
+}
+
 export interface UserTokens {
   userId: string;
   accessToken: string;
@@ -90,6 +102,37 @@ export function initializeDatabase(db: Database.Database) {
     );
   `);
 
+  // Create draft tweets table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS draft_tweets (
+        id TEXT PRIMARY KEY,
+        content TEXT NOT NULL,
+        mediaIds TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        status TEXT NOT NULL,
+        threadId TEXT,
+        position INTEGER,
+        tags TEXT,
+        userId TEXT NOT NULL,
+        FOREIGN KEY(userId) REFERENCES user_tokens(userId)
+    );
+`);
+
+  // Create draft threads table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS draft_threads (
+        id TEXT PRIMARY KEY,
+        tweetIds TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        status TEXT NOT NULL,
+        tags TEXT,
+        userId TEXT NOT NULL,
+        FOREIGN KEY(userId) REFERENCES user_tokens(userId)
+    );
+`);
+
   // Create indices for faster querying
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_tweets_scheduled_for ON scheduled_tweets(scheduledFor);
@@ -97,4 +140,11 @@ export function initializeDatabase(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_tweets_user_id ON scheduled_tweets(userId);
     CREATE INDEX IF NOT EXISTS idx_threads_user_id ON scheduled_threads(userId);
   `);
+
+  // Create indices for drafts
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_draft_tweets_user_id ON draft_tweets(userId);
+    CREATE INDEX IF NOT EXISTS idx_draft_threads_user_id ON draft_threads(userId);
+    CREATE INDEX IF NOT EXISTS idx_draft_tweets_thread_id ON draft_tweets(threadId);
+`);
 }
