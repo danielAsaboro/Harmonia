@@ -23,8 +23,8 @@ function TwitterAuthPageContent() {
   const handleTwitterSignIn = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/auth/twitter/authorize", {
-        method: "POST",
+      const response = await fetch("/api/auth/twitter/", {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },

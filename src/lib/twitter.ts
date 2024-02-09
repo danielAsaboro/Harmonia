@@ -1,19 +1,48 @@
-// // /lib/twitter.ts
+// lib/twitter.ts
 import { TwitterApi } from "twitter-api-v2";
 import { getSession } from "./session";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+interface TwitterTokens {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  // OAuth 1.0a tokens for media upload
+  oauth1AccessToken?: string;
+  oauth1AccessSecret?: string;
+}
+
+interface TwitterSessionData {
+  tokens: TwitterTokens;
+  userData: any;
+}
 
 export async function getTwitterClient(
   sessionData: string,
   req?: NextRequest
-): Promise<TwitterApi> {
+): Promise<{ v1Client: TwitterApi; v2Client: TwitterApi }> {
   try {
     const { tokens } = JSON.parse(sessionData) as TwitterSessionData;
 
-    // Check if token needs refresh
-    if (Date.now() >= tokens.expiresAt && tokens.refreshToken) {
-      const client = new TwitterApi({
+    // Initialize OAuth 1.0a client if tokens exist
+    let v1Client: TwitterApi | null = null;
+    if (tokens.oauth1AccessToken && tokens.oauth1AccessSecret) {
+      v1Client = new TwitterApi({
+        appKey: process.env.TWITTER_API_KEY!,
+        appSecret: process.env.TWITTER_API_SECRET!,
+        accessToken: tokens.oauth1AccessToken,
+        accessSecret: tokens.oauth1AccessSecret,
+      });
+    }
+
+    // Check if OAuth 2.0 token needs refresh
+    let v2AccessToken = tokens.accessToken;
+    if (
+      tokens.expiresAt &&
+      Date.now() >= tokens.expiresAt &&
+      tokens.refreshToken
+    ) {
+      const tempClient = new TwitterApi({
         clientId: process.env.TWITTER_CLIENT_ID!,
         clientSecret: process.env.TWITTER_CLIENT_SECRET!,
       });
@@ -22,16 +51,17 @@ export async function getTwitterClient(
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
         expiresIn,
-      } = await client.refreshOAuth2Token(tokens.refreshToken);
+      } = await tempClient.refreshOAuth2Token(tokens.refreshToken);
 
       // Create updated session data
       const updatedSessionData: TwitterSessionData = {
         tokens: {
+          ...tokens,
           accessToken: newAccessToken,
           refreshToken: newRefreshToken,
           expiresAt: Date.now() + expiresIn * 1000,
         },
-        userData: JSON.parse(sessionData).userData, // Preserve existing user data
+        userData: JSON.parse(sessionData).userData,
       };
 
       // Update session if request is provided
@@ -41,26 +71,50 @@ export async function getTwitterClient(
           "twitter_session",
           JSON.stringify(updatedSessionData)
         );
-
-        // Create a response to update cookies
-        const response = new NextResponse();
-        response.cookies.set({
-          name: "twitter_session",
-          value: JSON.stringify(updatedSessionData),
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        });
       }
 
-      return new TwitterApi(newAccessToken);
+      v2AccessToken = newAccessToken;
     }
 
-    return new TwitterApi(tokens.accessToken);
+    // Create OAuth 2.0 client
+    const v2Client = new TwitterApi(v2AccessToken);
+
+    // If no OAuth 1.0a client exists, create a read-only one for media uploads
+    if (!v1Client) {
+      v1Client = new TwitterApi({
+        appKey: process.env.TWITTER_API_KEY!,
+        appSecret: process.env.TWITTER_API_SECRET!,
+      });
+    }
+
+    return { v1Client, v2Client };
   } catch (error) {
     console.error("Error getting Twitter client:", error);
     throw new Error("Failed to initialize Twitter client");
+  }
+}
+
+// Helper function to handle media uploads
+export async function uploadTwitterMedia(
+  client: TwitterApi,
+  mediaData: string
+): Promise<string> {
+  try {
+    // Remove data:image/jpeg;base64, prefix
+    const base64Data = mediaData.split(";base64,").pop() || "";
+    const buffer = Buffer.from(base64Data, "base64");
+
+    // Determine media type from the data URL
+    const mediaType = mediaData.split(";")[0].split("/")[1];
+
+    // Upload to Twitter using v1 API
+    const mediaId = await client.v1.uploadMedia(buffer, {
+      mimeType: `image/${mediaType}`,
+    });
+
+    return mediaId;
+  } catch (error) {
+    console.error("Error uploading media to Twitter:", error);
+    throw new Error("Failed to upload media to Twitter");
   }
 }

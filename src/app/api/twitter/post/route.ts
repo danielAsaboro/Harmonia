@@ -1,6 +1,6 @@
-// /app/api/twitter/post/route.ts
+// app/api/twitter/post/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getTwitterClient } from "@/lib/twitter";
+import { getTwitterClient, uploadTwitterMedia } from "@/lib/twitter";
 import { getSession } from "@/lib/session";
 
 interface TweetData {
@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const tweets: TweetData[] = Array.isArray(data) ? data : [data];
 
-    // Initialize Twitter client
-    const client = await getTwitterClient(tokens);
+    // Initialize Twitter clients
+    const { v1Client, v2Client } = await getTwitterClient(tokens, request);
 
     let previousTweetId: string | undefined;
     const postedTweets = [];
@@ -34,24 +34,12 @@ export async function POST(request: NextRequest) {
     for (const tweet of tweets) {
       let mediaIds: string[] = [];
 
-      // Upload media if present
+      // Upload media if present using v1 client
       if (tweet.media && tweet.media.length > 0) {
         mediaIds = await Promise.all(
-          tweet.media.map(async (mediaItem: string) => {
-            // Remove data:image/jpeg;base64, prefix
-            const base64Data = mediaItem.split(";base64,").pop() || "";
-            const buffer = Buffer.from(base64Data, "base64");
-
-            // Determine media type
-            const mediaType = mediaItem.split(";")[0].split("/")[1];
-
-            // Upload to Twitter
-            const mediaResponse = await client.v1.uploadMedia(buffer, {
-              mimeType: `image/${mediaType}`,
-            });
-
-            return mediaResponse;
-          })
+          tweet.media.map((mediaItem: string) =>
+            uploadTwitterMedia(v1Client, mediaItem)
+          )
         );
       }
 
@@ -77,8 +65,8 @@ export async function POST(request: NextRequest) {
         return undefined;
       };
 
-      // Post tweet
-      const postedTweet = await client.v2.tweet(tweet.content, {
+      // Post tweet using v2 client
+      const postedTweet = await v2Client.v2.tweet(tweet.content, {
         media:
           mediaIds.length > 0
             ? getMediaIdsTuple(mediaIds.slice(0, 4))

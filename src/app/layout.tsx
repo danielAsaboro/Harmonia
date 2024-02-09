@@ -9,7 +9,7 @@ import { initializeServices } from "@/lib/init";
 if (typeof window === "undefined") {
   // Only run on server side
   console.log("initializing services");
-  initializeServices();
+  // initializeServices();
 }
 
 const geistSans = Geist({

@@ -4,7 +4,6 @@ import { getSession } from "@/lib/session";
 import { getTwitterClient } from "@/lib/twitter";
 import { error } from "console";
 
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession(request);
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // If we reach here, we need to fetch fresh data
     const client = await getTwitterClient(sessionData, request);
-    const { data: userObject } = await client.v2.me({
+    const { data: userObject } = await client.v2Client.v2.me({
       "user.fields": [
         "name",
         "username",
