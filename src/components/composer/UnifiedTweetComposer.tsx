@@ -1,4 +1,5 @@
-// src/components/UnifiedTweetComposer.tsx
+// components/composer/UnifiedTweetComposer.tsx
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { Tweet, Thread } from "@/types/tweet";
@@ -6,19 +7,18 @@ import { storage } from "@/utils/localStorage";
 import MediaUpload from "./MediaUpload";
 import MediaPreview from "./MediaPreview";
 import ThreadPreview from "./ThreadPreview";
-import { PenSquare, Eye, Save, Clock, Send } from "lucide-react";
+import { useComposer } from "./ComposerContext";
+import { PenSquare, Eye, Save, Clock, Send, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import SchedulePicker from "./SchedulePicker";
 
-// Media storage helpers
+// Media storage helpers remain the same
 const MEDIA_STORAGE_KEY = "tweetMediaFiles";
 
 const storeMediaFile = async (file: File): Promise<string> => {
   const mediaId = uuidv4();
-
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-
     reader.onload = () => {
       try {
         const mediaStorage = JSON.parse(
@@ -35,7 +35,6 @@ const storeMediaFile = async (file: File): Promise<string> => {
         reject(error);
       }
     };
-
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -46,8 +45,7 @@ const getMediaFile = (mediaId: string): string | null => {
     const mediaStorage = JSON.parse(
       localStorage.getItem(MEDIA_STORAGE_KEY) || "{}"
     );
-    const media = mediaStorage[mediaId];
-    return media ? media.data : null;
+    return mediaStorage[mediaId]?.data || null;
   } catch {
     return null;
   }
@@ -65,23 +63,56 @@ const removeMediaFile = (mediaId: string): void => {
   }
 };
 
-export default function UnifiedTweetComposer() {
+interface UnifiedTweetComposerProps {
+  draftId: string | null;
+  draftType: "tweet" | "thread" | null;
+}
+
+export default function UnifiedTweetComposer({
+  draftId,
+  draftType,
+}: UnifiedTweetComposerProps) {
+  const { hideEditor, loadDraft } = useComposer();
+  const [isLoading, setIsLoading] = useState(true);
   const [showScheduler, setShowScheduler] = useState(false);
-  const [rawContent, setRawContent] = useState("");
-  const [tweets, setTweets] = useState<Tweet[]>([
-    {
-      id: uuidv4(),
-      content: "",
-      media: [],
-      createdAt: new Date(),
-      status: "draft",
-    },
-  ]);
   const [showPreview, setShowPreview] = useState(false);
+  const [tweets, setTweets] = useState<Tweet[]>([]);
   const [isThread, setIsThread] = useState(false);
   const [threadId] = useState<string>(uuidv4());
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const lastSaveRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    const initializeComposer = async () => {
+      if (draftId) {
+        const draft = loadDraft();
+        if (draft) {
+          if ("tweetIds" in draft) {
+            // It's a thread
+            setIsThread(true);
+            setTweets(draft.tweets || []);
+          } else {
+            // It's a single tweet
+            setTweets([draft as Tweet]);
+          }
+        }
+      } else {
+        // New draft
+        setTweets([
+          {
+            id: uuidv4(),
+            content: "",
+            media: [],
+            createdAt: new Date(),
+            status: "draft",
+          },
+        ]);
+      }
+      setIsLoading(false);
+    };
+
+    initializeComposer();
+  }, [draftId, draftType, loadDraft]);
 
   const setTextAreaRef = (el: HTMLTextAreaElement | null, index: number) => {
     if (el) {
@@ -94,7 +125,7 @@ export default function UnifiedTweetComposer() {
 
     if (isThread) {
       const thread: Thread = {
-        id: threadId,
+        id: draftId || threadId,
         tweetIds: tweets.map((t) => t.id),
         createdAt: new Date(),
         status: "draft",
@@ -104,13 +135,14 @@ export default function UnifiedTweetComposer() {
 
     tweets.forEach((tweet, index) => {
       if (isThread) {
-        tweet.threadId = threadId;
+        tweet.threadId = draftId || threadId;
         tweet.position = index;
       }
       storage.saveTweet(tweet);
     });
   };
 
+  // Existing useEffect for autosave
   useEffect(() => {
     const interval = setInterval(() => {
       if (Date.now() - lastSaveRef.current >= 15000) {
@@ -121,6 +153,7 @@ export default function UnifiedTweetComposer() {
     return () => clearInterval(interval);
   }, [tweets, isThread]);
 
+  // Existing useEffect for keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
@@ -133,26 +166,6 @@ export default function UnifiedTweetComposer() {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [tweets, isThread]);
 
-  useEffect(() => {
-    const parts = rawContent.split(/\n{2,}/);
-    const newTweets = parts.map((content, index) => {
-      const existingTweet = tweets[index] || {
-        id: uuidv4(),
-        createdAt: new Date(),
-        status: "draft" as const,
-      };
-
-      return {
-        ...existingTweet,
-        content: content.trim(),
-        media: existingTweet.media || [],
-      };
-    });
-
-    setTweets(newTweets);
-    setIsThread(parts.length > 1);
-  }, [rawContent]);
-
   const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
     const newTweets = [...tweets];
     const currentMedia = newTweets[tweetIndex].media || [];
@@ -164,11 +177,9 @@ export default function UnifiedTweetComposer() {
     }
 
     try {
-      // Store each file and get media IDs
       const mediaIds = await Promise.all(
         files.map((file) => storeMediaFile(file))
       );
-
       newTweets[tweetIndex] = {
         ...newTweets[tweetIndex],
         media: [...currentMedia, ...mediaIds],
@@ -208,7 +219,7 @@ export default function UnifiedTweetComposer() {
 
     if (isThread) {
       const thread: Thread = {
-        id: threadId,
+        id: draftId || threadId,
         tweetIds: updatedTweets.map((t) => t.id),
         createdAt: new Date(),
         status: "posted",
@@ -220,36 +231,16 @@ export default function UnifiedTweetComposer() {
       storage.saveTweet(tweet);
     });
 
-    // Cleanup media files on publish if needed
-    tweets.forEach((tweet) => {
-      tweet.media?.forEach((mediaId) => {
-        removeMediaFile(mediaId);
-      });
-    });
-
-    setTweets([
-      {
-        id: uuidv4(),
-        content: "",
-        media: [],
-        createdAt: new Date(),
-        status: "draft",
-      },
-    ]);
-    setIsThread(false);
-    setRawContent("");
+    hideEditor();
   };
 
-  useEffect(() => {
-    return () => {
-      // Cleanup media files when component unmounts
-      tweets.forEach((tweet) => {
-        tweet.media?.forEach((mediaId) => {
-          removeMediaFile(mediaId);
-        });
-      });
-    };
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -257,6 +248,12 @@ export default function UnifiedTweetComposer() {
         <div className="flex items-center gap-2">
           <button className="p-2 hover:bg-gray-800 rounded-full">
             <PenSquare size={20} className="text-blue-400" />
+          </button>
+          <button
+            onClick={hideEditor}
+            className="p-2 hover:bg-gray-800 rounded-full"
+          >
+            <X size={20} className="text-gray-400" />
           </button>
         </div>
         <div className="flex items-center gap-3">
@@ -277,6 +274,7 @@ export default function UnifiedTweetComposer() {
         </div>
       </div>
 
+      {/* Rest of the component remains largely the same */}
       <div className="bg-gray-900 rounded-lg divide-y divide-gray-800">
         {tweets.map((tweet, index) => (
           <div key={tweet.id} className="relative p-4">
@@ -323,7 +321,7 @@ export default function UnifiedTweetComposer() {
                         media: [],
                         createdAt: new Date(),
                         status: "draft",
-                        threadId: isThread ? threadId : undefined,
+                        threadId: isThread ? draftId || threadId : undefined,
                         position: index + 1,
                       };
                       const newTweets = [...tweets];

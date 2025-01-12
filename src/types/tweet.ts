@@ -5,7 +5,7 @@ export type TweetStatus = "draft" | "scheduled" | "posted";
 export interface Tweet {
   id: string;
   content: string;
-  media?: string[]; 
+  media?: string[];
   createdAt: Date;
   status: TweetStatus;
   scheduledFor?: Date;
@@ -21,10 +21,14 @@ export interface Thread {
   scheduledFor?: Date;
 }
 
+export interface ThreadWithTweets extends Thread {
+  tweets: Tweet[];
+}
+
 // Types for media storage
 export interface StoredMedia {
   id: string;
-  data: string;  // base64 encoded file data
-  type: string;  // mime type
+  data: string; // base64 encoded file data
+  type: string; // mime type
   lastModified: string;
 }

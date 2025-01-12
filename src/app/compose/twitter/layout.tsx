@@ -1,71 +1,205 @@
 // app/compose/twitter/layout.tsx
-
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ComposerProvider,
   useComposer,
 } from "@/components/composer/ComposerContext";
-import { Tweet } from "@/types/tweet";
-import { testTweets } from "@/types/data";
-import {
-  DraftsSidebarContent,
-  PostedSidebarContent,
-  ScheduledSidebarContent,
-} from "@/components/composer/SidebarContent";
+import { Tweet, Thread } from "@/types/tweet";
+import { storage } from "@/utils/localStorage";
 
-function ComposerSidebar() {
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const { activeTab, setActiveTab } = useComposer();
-  const [tweetList, setTweetList] = useState<Tweet[]>([...testTweets]);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
+interface SidebarItemProps {
+  item: Tweet | Thread;
+  isSelected: boolean;
+  onClick: () => void;
+  onDelete: (id: string) => void;
+}
 
-  const createNewDraft = () => {
-    const newTweet: Tweet = {
-      id: `tweet-${Date.now()}`,
-      content: "",
-      createdAt: new Date(),
-      status: "draft",
-    };
+function SidebarItem({
+  item,
+  isSelected,
+  onClick,
+  onDelete,
+}: SidebarItemProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isThread = "tweetIds" in item;
 
-    setTweetList((prev) => [newTweet, ...prev]);
-    setSelectedPostId(newTweet.id);
-    setIsCreatingNew(false);
-  };
+  const preview = isThread
+    ? storage.getTweets().find((t) => t.threadId === item.id)?.content || ""
+    : (item as Tweet).content;
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case "drafts":
-        return (
-          <DraftsSidebarContent
-            tweets={tweetList}
-            selectedPostId={selectedPostId}
-            setSelectedPostId={setSelectedPostId}
-          />
-        );
-      case "scheduled":
-        return (
-          <ScheduledSidebarContent
-            tweets={tweetList}
-            selectedPostId={selectedPostId}
-            setSelectedPostId={setSelectedPostId}
-          />
-        );
-      case "posted":
-        return (
-          <PostedSidebarContent
-            tweets={tweetList}
-            selectedPostId={selectedPostId}
-            setSelectedPostId={setSelectedPostId}
-          />
-        );
-      default:
-        return null;
+  const truncatedPreview =
+    preview.slice(0, 80) + (preview.length > 80 ? "..." : "");
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this draft?")) {
+      if (isThread) {
+        storage.deleteThread(item.id);
+      } else {
+        storage.deleteTweet(item.id);
+      }
+      setShowMenu(false);
+      onDelete(item.id);
     }
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Implement share functionality
+  };
+
   return (
-    <div className="border-gray-800 max-w-min border-r bg-black">
+    <div
+      className={`
+        relative p-4 cursor-pointer transition-all duration-200 border-b border-gray-800
+        ${isSelected ? "bg-gray-800" : "hover:bg-gray-900"}
+      `}
+    >
+      <div className="flex justify-between items-start group" onClick={onClick}>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2 mb-1">
+            <span className="text-sm text-gray-400">
+              {isThread ? "🧵 Thread" : "💭 Tweet"}
+            </span>
+            <span className="text-xs text-gray-500">
+              {new Date(item.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+          <p className="text-gray-300 text-sm truncate">{truncatedPreview}</p>
+        </div>
+
+        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+            className="p-1 hover:bg-gray-700 rounded-full"
+          >
+            <svg
+              className="w-4 h-4 text-gray-400"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+            >
+              <circle cx="8" cy="2" r="1.5" />
+              <circle cx="8" cy="8" r="1.5" />
+              <circle cx="8" cy="14" r="1.5" />
+            </svg>
+          </button>
+        </div>
+
+        {showMenu && (
+          <div
+            ref={menuRef}
+            className="absolute right-4 top-8 z-50 w-48 bg-gray-900 rounded-lg shadow-lg border border-gray-700"
+          >
+            <div className="py-1">
+              <button
+                onClick={handleShare}
+                className="w-full px-4 py-2 text-sm text-left text-gray-300 hover:bg-gray-800 flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+                Share
+              </button>
+              <button
+                onClick={handleDelete}
+                className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-gray-800 flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ComposerSidebar() {
+  const { activeTab, setActiveTab, editorState, showEditor, hideEditor } =
+    useComposer();
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [items, setItems] = useState<(Tweet | Thread)[]>([]);
+
+  useEffect(() => {
+    const loadItems = () => {
+      let filtered: (Tweet | Thread)[] = [];
+      const tweets = storage.getTweets();
+      const threads = storage.getThreads();
+
+      switch (activeTab) {
+        case "drafts":
+          filtered = [
+            ...tweets.filter((t) => t.status === "draft" && !t.threadId),
+            ...threads.filter((t) => t.status === "draft"),
+          ];
+          break;
+        case "scheduled":
+          filtered = [
+            ...tweets.filter((t) => t.status === "scheduled" && !t.threadId),
+            ...threads.filter((t) => t.status === "scheduled"),
+          ];
+          break;
+        case "posted":
+          filtered = [
+            ...tweets.filter((t) => t.status === "posted" && !t.threadId),
+            ...threads.filter((t) => t.status === "posted"),
+          ];
+          break;
+      }
+
+      setItems(
+        filtered.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      );
+    };
+
+    loadItems();
+  }, [activeTab]);
+
+  const createNewDraft = () => {
+    showEditor();
+    setIsCreatingNew(false);
+  };
+
+  const handleItemClick = (item: Tweet | Thread) => {
+    const type = "tweetIds" in item ? "thread" : "tweet";
+    showEditor(item.id, type);
+  };
+
+  return (
+    <div className="border-gray-800 w-80 border-r bg-black">
       <nav className="flex border-b border-gray-800">
         {(["drafts", "scheduled", "posted"] as const).map((tab) => (
           <button
@@ -96,29 +230,29 @@ function ComposerSidebar() {
             <div className="flex items-center space-x-2">
               <div
                 className={`
-                flex items-center justify-center
-                w-6 h-6 rounded-full
-                ${isCreatingNew ? "bg-blue-500" : "bg-gray-700"}
-                transition-all duration-200
-              `}
+                  flex items-center justify-center
+                  w-6 h-6 rounded-full
+                  ${isCreatingNew ? "bg-blue-500" : "bg-gray-700"}
+                  transition-all duration-200
+                `}
               >
                 <span className="text-white text-lg">+</span>
               </div>
               <span
                 className={`
-                font-medium
-                ${isCreatingNew ? "text-blue-500" : "text-gray-300"}
-                transition-all duration-200
-              `}
+                  font-medium
+                  ${isCreatingNew ? "text-blue-500" : "text-gray-300"}
+                  transition-all duration-200
+                `}
               >
                 New Draft
               </span>
             </div>
             <div
               className={`
-              transform transition-transform duration-200
-              ${isCreatingNew ? "rotate-180" : "rotate-0"}
-            `}
+                transform transition-transform duration-200
+                ${isCreatingNew ? "rotate-180" : "rotate-0"}
+              `}
             >
               <svg
                 width="16"
@@ -139,7 +273,31 @@ function ComposerSidebar() {
             </div>
           </section>
         )}
-        <section className="border-b-2 h-screen">{renderContent()}</section>
+        <section className="h-screen overflow-y-auto">
+          {items.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              No {activeTab} available
+            </div>
+          ) : (
+            items.map((item) => (
+              <SidebarItem
+                key={item.id}
+                item={item}
+                isSelected={editorState.selectedDraftId === item.id}
+                onClick={() => handleItemClick(item)}
+                onDelete={(id) => {
+                  if (editorState.selectedDraftId === id) {
+                    hideEditor();
+                  }
+                  // Force re-render of the list
+                  setItems((prevItems) =>
+                    prevItems.filter((item) => item.id !== id)
+                  );
+                }}
+              />
+            ))
+          )}
+        </section>
       </div>
     </div>
   );
