@@ -22,40 +22,30 @@ import Image from "next/image";
 
 const navigationItems = [
   {
-    title: "Overview",
+    title: "Dashboard",
     icon: LayoutGrid,
     href: "/overview",
   },
   {
-    title: "Members",
+    title: "Members Management",
     icon: LineChart,
     href: "/members",
   },
   {
-    title: "Knowledge",
+    title: "Knowledge Base",
     icon: BookOpen,
     href: "/knowledge",
   },
   {
-    title: "Compose",
+    title: "Content Studio",
     icon: Trophy,
-    href: "/compose",
+    href: "/content",
   },
-  // {
-  //   title: "Learn",
-  //   icon: Target,
-  //   href: "/learn",
-  // },
-  //   {
-  //     title: "My Donations",
-  //     icon: Wallet,
-  //     href: "/my-donations",
-  //   },
-  //   {
-  //     title: "Withdraw Funds",
-  //     icon: BanknoteIcon,
-  //     href: "/withdraw",
-  //   },
+  {
+    title: "System Config",
+    icon: Target,
+    href: "/system-config",
+  },
 ];
 
 const bottomNavigationItems = [
@@ -111,9 +101,9 @@ const Sidebar = ({ className }: SidebarProps) => {
       <div className="mb-8">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/logo.svg"
+            src="/icons/app-icon.svg"
             alt="Harmonia"
-            className="h-16 w-24"
+            className="h-6 w-6"
             width={8}
             height={8}
           />
@@ -132,17 +122,17 @@ const Sidebar = ({ className }: SidebarProps) => {
       </nav>
 
       <Link
-        href="/start-campaign"
+        href="/project/start"
         className={cn(
           "mt-6 flex items-center gap-2 rounded-lg px-3 py-2 outline-0",
           "border-2 border-green-400 bg-transparent text-green-400 hover:bg-green-400 hover:text-white",
           "transition-colors duration-200",
-          pathname === "/start-campaign" &&
+          pathname === "/project/start" &&
             "bg-green-400 text-white hover:bg-green-500"
         )}
       >
         <Plus className="h-5 w-5" />
-        <span>Start a Campaign</span>
+        <span>New Project</span>
       </Link>
 
       <div className="mt-auto space-y-2">

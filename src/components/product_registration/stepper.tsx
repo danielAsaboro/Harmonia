@@ -1,7 +1,8 @@
-// stepper.tsx
+// /components/product_registration/stepper.tsx
 import React from "react";
 import { Check } from "lucide-react";
 import { useFormContext } from "./product-form-context";
+import { cn } from "@/utils/ts-merge";
 
 const steps = [
   { title: "Basic Info", description: "Product details" },
@@ -15,48 +16,64 @@ export const Stepper: React.FC = () => {
   const { currentStep } = useFormContext();
 
   return (
-    <div className="w-full px-4 mb-8">
-      <div className="flex justify-between">
-        {steps.map((step, index) => (
-          <div key={step.title} className="flex flex-col items-center">
-            <div className="relative flex items-center">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 
-                  ${
-                    index <= currentStep
-                      ? "border-primary bg-primary text-white"
-                      : "border-border text-secondaryText"
-                  }`}
-              >
-                {index < currentStep ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <span>{index + 1}</span>
-                )}
-              </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={`w-full h-[2px] absolute left-8 top-4 -translate-y-1/2
-                    ${index < currentStep ? "bg-primary" : "bg-border"}`}
-                  style={{ width: "100%" }}
-                />
+    <nav aria-label="Progress" className="w-full px-4 mb-8">
+      <ol role="list" className="flex items-center justify-between">
+        {steps.map((step, index) => {
+          const isActive = index === currentStep;
+          const isCompleted = index < currentStep;
+
+          return (
+            <li
+              key={step.title}
+              className={cn(
+                "relative flex flex-col items-center",
+                index !== steps.length - 1 &&
+                  "after:absolute after:left-[50%] after:top-[20px] after:h-0.5 after:w-full after:translate-x-[20px] md:after:w-full",
+                index < currentStep ? "after:bg-primary" : "after:bg-border"
               )}
-            </div>
-            <div className="mt-2 text-center">
-              <div
-                className={`text-sm font-medium ${
-                  index <= currentStep ? "text-text" : "text-secondaryText"
-                }`}
-              >
-                {step.title}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className={cn(
+                    "relative flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors duration-200",
+                    isActive && "border-primary bg-primary/10",
+                    isCompleted && "border-primary bg-primary",
+                    !isActive && !isCompleted && "border-border"
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="h-5 w-5 text-primary-foreground" />
+                  ) : (
+                    <span
+                      className={cn(
+                        "text-sm font-semibold",
+                        isActive ? "text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      {index + 1}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col items-center">
+                  <span
+                    className={cn(
+                      "text-sm font-medium",
+                      isActive || isCompleted
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {step.title}
+                  </span>
+                  <span className="hidden text-xs text-muted-foreground md:block">
+                    {step.description}
+                  </span>
+                </div>
               </div>
-              <div className="text-xs text-secondaryText">
-                {step.description}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 };
