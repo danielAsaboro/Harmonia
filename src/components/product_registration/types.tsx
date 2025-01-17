@@ -1,4 +1,4 @@
-// types.ts
+// /components/product_registration/types.tsx
 export interface FormItemProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   children: React.ReactNode;
@@ -44,6 +44,7 @@ export interface ButtonProps
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
+  variant?: "default" | "gradient" | "glass" | "outline" | "ghost";
 }
 
 export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {

@@ -22,13 +22,13 @@ export const metadata: Metadata = {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
-      <nav className="h-screen">
+      <nav className="sticky top-0 max-h-screen">
         <Sidebar />
       </nav>
       <main className="flex-1 bg-background">
         <Header
-          userName="Daniel"
-          className="flex w-full bg-card border-b border-border"
+          userName="Nigga"
+          className="sticky top-0 z-10 w-full bg-card border-b border-border"
         />
         <div className="p-6">{children}</div>
       </main>

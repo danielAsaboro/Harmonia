@@ -41,8 +41,8 @@ const SelectContent = React.forwardRef<
       ref={ref}
       className={`
         relative z-50 min-w-[8rem] overflow-hidden rounded-md 
-        border border-border bg-card text-card-foreground
-        shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out 
+        border border-border bg-slate-800 text-slate-100
+        shadow-lg shadow-black/30 data-[state=open]:animate-in data-[state=closed]:animate-out 
         data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 
         data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 
         data-[side=bottom]:slide-in-from-top-2 
@@ -68,6 +68,7 @@ const SelectContent = React.forwardRef<
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ));
+
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 const SelectItem = React.forwardRef<
@@ -80,8 +81,8 @@ const SelectItem = React.forwardRef<
       relative flex w-full cursor-pointer select-none items-center 
       rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none 
       transition-colors duration-200
-      focus:bg-primary/20 focus:text-foreground
-      hover:bg-primary/10
+      focus:bg-slate-700 focus:text-slate-100
+      hover:bg-slate-700
       data-[disabled]:pointer-events-none data-[disabled]:opacity-50
       ${className}`}
     {...props}

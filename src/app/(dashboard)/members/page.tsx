@@ -114,7 +114,7 @@ export default function MembersPage() {
                 <CardHeader className="p-4">
                   <CardTitle className="text-lg">{member.name}</CardTitle>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
+                <CardContent className="p-4 pt-4">
                   <div className="flex flex-wrap gap-2">
                     {member.skills.map((skill) => (
                       <Badge key={skill} variant="secondary">

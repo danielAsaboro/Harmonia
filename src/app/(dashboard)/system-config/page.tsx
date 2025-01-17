@@ -111,7 +111,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium">Model Selection</label>
-              <select className="w-full mt-1 p-2 border rounded-md">
+              <select className="w-full mt-1 p-2 border rounded-md bg-transparent">
                 <option value="llama2-70b">Llama2 70B</option>
                 <option value="llama2-13b">Llama2 13B</option>
                 <option value="mixtral-8x7b">Mixtral 8x7B</option>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium">Backup Schedule</label>
-              <select className="w-full mt-1 p-2 border rounded-md">
+              <select className="w-full mt-1 p-2 border rounded-md bg-transparent">
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
