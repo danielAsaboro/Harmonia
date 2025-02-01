@@ -1,6 +1,6 @@
 // src/types/tweet.ts
 
-export type TweetStatus = "draft" | "scheduled" | "posted";
+export type TweetStatus = "draft" | "scheduled" | "published";
 
 export interface Tweet {
   id: string;
@@ -24,7 +24,10 @@ export interface Thread {
 export interface ThreadWithTweets extends Thread {
   tweets: Tweet[];
 }
-
+export interface UnifiedTweetComposerProps {
+  draftId: string | null;
+  draftType: "tweet" | "thread" | null;
+}
 // Types for media storage
 export interface StoredMedia {
   id: string;

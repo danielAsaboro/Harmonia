@@ -32,6 +32,7 @@ import {
   StatCardProps,
   StepCardProps,
 } from "@/types/landing";
+import MentionInput from "@/components/ui/tags";
 
 const StatCard = ({ value, label, icon: Icon }: StatCardProps) => {
   const [count, setCount] = useState(0);

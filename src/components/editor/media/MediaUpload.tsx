@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef } from "react";
 
 interface Props {
   onUpload: (files: File[]) => void;
@@ -6,10 +6,10 @@ interface Props {
   acceptedTypes?: string;
 }
 
-export default function MediaUpload({ 
-  onUpload, 
+export default function MediaUpload({
+  onUpload,
   maxFiles = 4,
-  acceptedTypes = "image/*,video/*,gif/*" 
+  acceptedTypes = "image/*,video/*,gif/*",
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,7 +33,7 @@ export default function MediaUpload({
   };
 
   return (
-    <div 
+    <div
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
       className="relative"

@@ -1,11 +1,12 @@
-// components/composer/ComposerContext.tsx
+// components/Editor/EditorContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { storage } from "@/utils/localStorage";
+import { v4 as uuidv4 } from "uuid";
 
-type Tab = "drafts" | "scheduled" | "posted";
+type Tab = "drafts" | "scheduled" | "published";
 
 type EditorState = {
   isVisible: boolean;
@@ -13,21 +14,22 @@ type EditorState = {
   selectedDraftType: "tweet" | "thread" | null;
 };
 
-type ComposerContextType = {
+type EditorContextType = {
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
   editorState: EditorState;
   showEditor: (draftId?: string, type?: "tweet" | "thread") => void;
   hideEditor: () => void;
   loadDraft: () => Tweet | ThreadWithTweets | null;
+  refreshSidebar: () => void;
+  refreshCounter: number;
 };
 
-const ComposerContext = createContext<ComposerContextType | undefined>(
-  undefined
-);
+const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-export function ComposerProvider({ children }: { children: React.ReactNode }) {
+export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<Tab>("drafts");
+  const [refreshCounter, setRefreshCounter] = useState(0);
   const [editorState, setEditorState] = useState<EditorState>({
     isVisible: false,
     selectedDraftId: null,
@@ -36,11 +38,37 @@ export function ComposerProvider({ children }: { children: React.ReactNode }) {
 
   const showEditor = useCallback(
     (draftId?: string, type?: "tweet" | "thread") => {
-      setEditorState({
-        isVisible: true,
-        selectedDraftId: draftId || null,
-        selectedDraftType: type || null,
-      });
+      // If no draftId is provided, we're creating a new draft
+      if (!draftId) {
+        const newId = uuidv4();
+        const newTweet: Tweet = {
+          id: newId,
+          content: "",
+          media: [],
+          createdAt: new Date(),
+          status: "draft",
+        };
+
+        // Save the new tweet immediately
+        storage.saveTweet(newTweet);
+
+        // Set editor state for the new draft
+        setEditorState({
+          isVisible: true,
+          selectedDraftId: newId,
+          selectedDraftType: "tweet",
+        });
+
+        // Force refresh to update sidebar
+        setRefreshCounter((prev) => prev + 1);
+      } else {
+        // Opening an existing draft
+        setEditorState({
+          isVisible: true,
+          selectedDraftId: draftId,
+          selectedDraftType: type || "tweet",
+        });
+      }
     },
     []
   );
@@ -51,6 +79,7 @@ export function ComposerProvider({ children }: { children: React.ReactNode }) {
       selectedDraftId: null,
       selectedDraftType: null,
     });
+    setRefreshCounter((prev) => prev + 1);
   }, []);
 
   const loadDraft = useCallback(() => {
@@ -66,7 +95,6 @@ export function ComposerProvider({ children }: { children: React.ReactNode }) {
       const thread = threads.find((t) => t.id === editorState.selectedDraftId);
 
       if (thread) {
-        // Load all tweets associated with this thread
         const tweets = storage
           .getTweets()
           .filter((t) => t.threadId === thread.id)
@@ -74,15 +102,19 @@ export function ComposerProvider({ children }: { children: React.ReactNode }) {
 
         return {
           ...thread,
-          tweets, // Adding tweets to thread object for easier access
-        }  as ThreadWithTweets;
+          tweets,
+        } as ThreadWithTweets;
       }
       return null;
     }
   }, [editorState.selectedDraftId, editorState.selectedDraftType]);
 
+  const refreshSidebar = useCallback(() => {
+    setRefreshCounter((prev) => prev + 1);
+  }, []);
+
   return (
-    <ComposerContext.Provider
+    <EditorContext.Provider
       value={{
         activeTab,
         setActiveTab,
@@ -90,17 +122,19 @@ export function ComposerProvider({ children }: { children: React.ReactNode }) {
         showEditor,
         hideEditor,
         loadDraft,
+        refreshSidebar,
+        refreshCounter,
       }}
     >
       {children}
-    </ComposerContext.Provider>
+    </EditorContext.Provider>
   );
 }
 
-export function useComposer() {
-  const context = useContext(ComposerContext);
+export function useEditor() {
+  const context = useContext(EditorContext);
   if (context === undefined) {
-    throw new Error("useComposer must be used within a ComposerProvider");
+    throw new Error("useEditor must be used within a EditorProvider");
   }
   return context;
 }

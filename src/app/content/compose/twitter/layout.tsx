@@ -1,12 +1,11 @@
 // app/compose/twitter/layout.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import {
-  ComposerProvider,
-  useComposer,
-} from "@/components/composer/ComposerContext";
+import { EditorProvider, useEditor } from "@/components/editor/context/Editor";
 import { Tweet, Thread } from "@/types/tweet";
 import { storage } from "@/utils/localStorage";
+import { UserAccountProvider } from "@/components/editor/context/account";
+import ConfirmDialog from "@/components/editor/ConfirmDialog";
 
 interface SidebarItemProps {
   item: Tweet | Thread;
@@ -24,6 +23,7 @@ function SidebarItem({
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isThread = "tweetIds" in item;
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const preview = isThread
     ? storage.getTweets().find((t) => t.threadId === item.id)?.content || ""
@@ -42,17 +42,15 @@ function SidebarItem({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this draft?")) {
-      if (isThread) {
-        storage.deleteThread(item.id);
-      } else {
-        storage.deleteTweet(item.id);
-      }
-      setShowMenu(false);
-      onDelete(item.id);
+  const handleConfirmDelete = () => {
+    // This is the actual delete logic that will run after confirmation
+    if (isThread) {
+      storage.deleteThread(item.id);
+    } else {
+      storage.deleteTweet(item.id);
     }
+    setShowMenu(false);
+    onDelete(item.id);
   };
 
   const handleShare = (e: React.MouseEvent) => {
@@ -67,6 +65,17 @@ function SidebarItem({
         ${isSelected ? "bg-gray-800" : "hover:bg-gray-900"}
       `}
     >
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete this ${
+          isThread ? "Thread" : "Tweet"
+        } This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
       <div className="flex justify-between items-start group" onClick={onClick}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-1">
@@ -122,7 +131,8 @@ function SidebarItem({
                 Share
               </button>
               <button
-                onClick={handleDelete}
+                // onClick={handleDelete}
+                onClick={(_) => setShowConfirmDialog(true)}
                 className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-gray-800 flex items-center gap-2"
               >
                 <svg
@@ -144,12 +154,19 @@ function SidebarItem({
   );
 }
 
-function ComposerSidebar() {
-  const { activeTab, setActiveTab, editorState, showEditor, hideEditor } =
-    useComposer();
+function EditorSidebar() {
+  const {
+    activeTab,
+    setActiveTab,
+    editorState,
+    showEditor,
+    hideEditor,
+    refreshSidebar,
+  } = useEditor();
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [items, setItems] = useState<(Tweet | Thread)[]>([]);
 
+  // Load items whenever storage changes or tab changes
   useEffect(() => {
     const loadItems = () => {
       let filtered: (Tweet | Thread)[] = [];
@@ -169,10 +186,10 @@ function ComposerSidebar() {
             ...threads.filter((t) => t.status === "scheduled"),
           ];
           break;
-        case "posted":
+        case "published":
           filtered = [
-            ...tweets.filter((t) => t.status === "posted" && !t.threadId),
-            ...threads.filter((t) => t.status === "posted"),
+            ...tweets.filter((t) => t.status === "published" && !t.threadId),
+            ...threads.filter((t) => t.status === "published"),
           ];
           break;
       }
@@ -185,8 +202,9 @@ function ComposerSidebar() {
       );
     };
 
+    // Initial load
     loadItems();
-  }, [activeTab]);
+  }, [activeTab, refreshSidebar]);
 
   const createNewDraft = () => {
     showEditor();
@@ -201,7 +219,7 @@ function ComposerSidebar() {
   return (
     <div className="border-gray-800 w-80 border-r bg-black">
       <nav className="flex border-b border-gray-800">
-        {(["drafts", "scheduled", "posted"] as const).map((tab) => (
+        {(["drafts", "scheduled", "published"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -309,11 +327,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ComposerProvider>
-      <div className="flex">
-        <ComposerSidebar />
-        <main className="flex-1">{children}</main>
-      </div>
-    </ComposerProvider>
+    <UserAccountProvider>
+      <EditorProvider>
+        <div className="flex">
+          <EditorSidebar />
+          <main className="flex-1">{children}</main>
+        </div>
+      </EditorProvider>
+    </UserAccountProvider>
   );
 }

@@ -32,7 +32,7 @@ export const testTweets: Tweet[] = [
       "5 tips for better productivity:\n1. Start early\n2. Break tasks down\n3. Take regular breaks\n4. Stay hydrated\n5. Review progress daily",
     media: ["productivity-chart.png"],
     createdAt: createDate(-5),
-    status: "posted",
+    status: "published",
   },
 
   // Thread tweets

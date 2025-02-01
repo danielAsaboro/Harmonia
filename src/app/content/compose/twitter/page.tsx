@@ -1,12 +1,12 @@
 // app/compose/twitter/page.tsx
 "use client";
 
-import { useComposer } from "@/components/composer/ComposerContext";
-import UnifiedTweetComposer from "@/components/composer/UnifiedTweetComposer";
+import { useEditor } from "@/components/editor/context/Editor";
+import PlayGround from "@/components/editor/Main";
 import { PenSquare } from "lucide-react";
 
 function WelcomeScreen() {
-  const { showEditor } = useComposer();
+  const { showEditor } = useEditor();
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">
@@ -31,13 +31,13 @@ function WelcomeScreen() {
 }
 
 export default function TwitterEditor() {
-  const { editorState } = useComposer();
+  const { editorState } = useEditor();
 
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-4xl mx-auto p-4">
         {editorState.isVisible ? (
-          <UnifiedTweetComposer
+          <PlayGround
             draftId={editorState.selectedDraftId}
             draftType={editorState.selectedDraftType}
           />
@@ -51,7 +51,7 @@ export default function TwitterEditor() {
 
 // Content Studio
 
-// Twitter Post Composer
+// Twitter Post EduseEditor
 // Telegram Response Templates
 // Content Calendar
 // Approval Workflow
