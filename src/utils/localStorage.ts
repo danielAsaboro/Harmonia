@@ -207,6 +207,44 @@ export class TweetStorageService {
       console.error("Error deleting thread:", error);
     }
   }
+  
+  deleteTweetFromThread(tweetId: string) {
+    try {
+      // Get all tweets
+      const tweets = this.getTweets();
+
+      // Find the tweet and its thread
+      const tweetToDelete = tweets.find((t) => t.id === tweetId);
+
+      if (tweetToDelete && tweetToDelete.threadId) {
+        // Remove the tweet from tweets
+        const updatedTweets = tweets.filter((t) => t.id !== tweetId);
+
+        // Update threads: remove the tweet ID from the thread's tweetIds
+        const threads = this.getThreads();
+        const updatedThreads = threads.map((thread) => {
+          if (thread.id === tweetToDelete.threadId) {
+            return {
+              ...thread,
+              tweetIds: thread.tweetIds.filter((id) => id !== tweetId),
+            };
+          }
+          return thread;
+        });
+
+        // Completely remove threads with no tweets
+        const filteredThreads = updatedThreads.filter(
+          (thread) => thread.tweetIds.length > 0
+        );
+
+        // Save updated data
+        localStorage.setItem(this.TWEETS_KEY, JSON.stringify(updatedTweets));
+        localStorage.setItem(this.THREADS_KEY, JSON.stringify(filteredThreads));
+      }
+    } catch (error) {
+      console.error("Error deleting tweet from thread:", error);
+    }
+  }
 
   /**
    * Gets the timestamp of the last save operation

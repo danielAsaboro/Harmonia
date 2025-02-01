@@ -10,7 +10,6 @@ import { PenSquare, Eye, Save, Clock, Send, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import SchedulePicker from "./SchedulePicker";
 import { SaveStatus } from "./storage/SaveStatus";
-// import { getMediaFile, removeMediaFile, storeMediaFile } from "./media";
 import { useUserAccount } from "./context/account";
 import CharacterCount, { AddTweetButton, ThreadPosition } from "./extras";
 import { SaveState } from "./storage";
@@ -187,13 +186,52 @@ export default function PlayGround({
         media: [],
         createdAt: new Date(),
         status: "draft",
+        threadId: undefined, // Remove threadId
       };
-    } else {
-      newTweets.splice(index, 1);
-      setIsThread(newTweets.length > 1);
-    }
 
-    setTweets(newTweets);
+      // Completely remove the thread if it exists
+      if (threadId) {
+        // Delete the entire thread from storage
+        tweetStorage.deleteThread(threadId);
+
+        // Reset thread-related states
+        setThreadId(null);
+        setIsThread(false);
+      }
+    } else {
+      // Removing a tweet from a multi-tweet thread
+      if (isThread && threadId) {
+        // Completely delete the entire thread
+        tweetStorage.deleteThread(threadId);
+
+        // Convert remaining tweets to standalone tweets
+        const remainingTweets = newTweets
+          .filter((_, i) => i !== index)
+          .map((tweet) => ({
+            ...tweet,
+            threadId: undefined,
+            position: undefined,
+          }));
+
+        // Save each remaining tweet as a standalone tweet
+        remainingTweets.forEach((tweet) => {
+          tweetStorage.saveTweet(tweet, true);
+        });
+
+        // Reset thread states
+        setThreadId(null);
+        setIsThread(false);
+
+        // Update local state
+        newTweets.splice(index, 1);
+        setTweets(remainingTweets);
+      } else {
+        // For standalone tweets, simply delete
+        tweetStorage.deleteTweet(newTweets[index].id);
+        newTweets.splice(index, 1);
+        setTweets(newTweets);
+      }
+    }
   };
 
   const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
@@ -378,8 +416,8 @@ export default function PlayGround({
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Header Left Side */}
       <div className="flex justify-between items-center mb-4">
+        {/* Header Left Side */}
         <div className="flex items-center gap-2">
           <button
             onClick={hideEditor}
@@ -392,6 +430,7 @@ export default function PlayGround({
         {/* Header Right Side */}
         {activeTab === "drafts" && (
           <div className="flex items-center gap-3">
+            <SaveStatus saveState={saveState} />
             <button
               className="px-4 py-1.5 text-gray-400 hover:bg-gray-800 rounded-full flex items-center gap-2"
               onClick={() => setShowScheduler(true)}
