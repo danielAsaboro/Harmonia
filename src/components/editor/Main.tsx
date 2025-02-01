@@ -15,7 +15,11 @@ import { useUserAccount } from "./context/account";
 import CharacterCount, { AddTweetButton, ThreadPosition } from "./extras";
 import { SaveState } from "./storage";
 import { tweetStorage } from "@/utils/localStorage";
-import { getMediaFile, removeMediaFile, storeMediaFile } from "./media/indexedDB";
+import {
+  getMediaFile,
+  removeMediaFile,
+  storeMediaFile,
+} from "./media/indexedDB";
 
 export default function PlayGround({
   draftId,
@@ -191,33 +195,6 @@ export default function PlayGround({
 
     setTweets(newTweets);
   };
-
-  // const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
-  //   const newTweets = [...tweets];
-  //   const currentMedia = newTweets[tweetIndex].media || [];
-  //   const totalFiles = currentMedia.length + files.length;
-
-  //   if (totalFiles > 4) {
-  //     alert("Maximum 4 media files per tweet");
-  //     return;
-  //   }
-
-  //   try {
-  //     const mediaIds = await Promise.all(
-  //       files.map((file) => storeMediaFile(file))
-  //     );
-
-  //     newTweets[tweetIndex] = {
-  //       ...newTweets[tweetIndex],
-  //       media: [...currentMedia, ...mediaIds],
-  //     };
-
-  //     setTweets(newTweets);
-  //   } catch (error) {
-  //     console.error("Error uploading media:", error);
-  //     alert("Failed to upload media");
-  //   }
-  // };
 
   const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
     const newTweets = [...tweets];
