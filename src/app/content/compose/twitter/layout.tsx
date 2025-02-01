@@ -6,7 +6,7 @@ import { Tweet, Thread } from "@/types/tweet";
 import { UserAccountProvider } from "@/components/editor/context/account";
 import ConfirmDialog from "@/components/editor/ConfirmDialog";
 import { SidebarItem } from "@/components/editor/SidebarItem";
-import { tweetStorage } from "@/services/tweetStorage";
+import { tweetStorage } from "@/utils/localStorage";
 
 function EditorSidebar() {
   const {
@@ -172,7 +172,8 @@ function EditorSidebar() {
         <section className="h-screen overflow-y-auto">
           {items.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              No {activeTab} available
+              No {activeTab == "drafts" ? activeTab : `${activeTab} post`}{" "}
+              available
             </div>
           ) : (
             items.map((item) => (

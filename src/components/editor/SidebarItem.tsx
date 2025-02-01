@@ -1,8 +1,8 @@
 // src/components/editor/SidebarItem.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { Tweet, Thread } from "@/types/tweet";
-import { tweetStorage } from "@/services/tweetStorage";
 import ConfirmDialog from "./ConfirmDialog";
+import { tweetStorage } from "@/utils/localStorage";
 
 interface SidebarItemProps {
   item: Tweet | Thread;
@@ -21,6 +21,8 @@ export function SidebarItem({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isThread = "tweetIds" in item;
+
+  console.log("is thread? :", isThread);
 
   // Get preview content - first tweet for threads, or the tweet content itself
   const preview = isThread

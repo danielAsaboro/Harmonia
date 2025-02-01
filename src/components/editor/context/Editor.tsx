@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { v4 as uuidv4 } from "uuid";
-import { tweetStorage } from "@/services/tweetStorage";
+import { tweetStorage } from "@/utils/localStorage";
 
 type Tab = "drafts" | "scheduled" | "published";
 

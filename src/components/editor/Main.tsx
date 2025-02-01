@@ -13,8 +13,8 @@ import { SaveStatus } from "./storage/SaveStatus";
 import { getMediaFile, removeMediaFile, storeMediaFile } from "./media";
 import { useUserAccount } from "./context/account";
 import CharacterCount, { AddTweetButton, ThreadPosition } from "./extras";
-import { tweetStorage } from "@/services/tweetStorage";
 import { SaveState } from "./storage";
+import { tweetStorage } from "@/utils/localStorage";
 
 export default function PlayGround({
   draftId,
