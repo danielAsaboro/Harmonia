@@ -232,64 +232,11 @@ export default function PlayGround({
     }
   };
 
-  // Then modify createNewTweet:
-  // const createNewTweet = (index: number) => {
-  //   if (!isThread) {
-  //     // Converting single tweet to thread - generate new threadId
-  //     const newThreadId = `thread-${uuidv4()}`; // Ensure thread ID is different from tweet IDs
-
-  //     // Update the first tweet with new thread ID
-  //     const firstTweet = {
-  //       ...tweets[0],
-  //       threadId: newThreadId,
-  //       position: 0,
-  //       id: tweets[0].id, // Keep original tweet ID
-  //     };
-
-  //     // Create new tweet with unique ID
-  //     const newTweet = {
-  //       id: `tweet-${uuidv4()}`,
-  //       content: "",
-  //       media: [],
-  //       createdAt: new Date(),
-  //       status: "draft" as const,
-  //       threadId: newThreadId,
-  //       position: 1,
-  //     };
-
-  //     setTweets([firstTweet, newTweet]);
-  //     setIsThread(true);
-  //   } else {
-  //     // Already a thread, just add new tweet
-  //     const newTweet = {
-  //       id: `tweet-${uuidv4()}`,
-  //       content: "",
-  //       media: [],
-  //       createdAt: new Date(),
-  //       status: "draft" as const,
-  //       threadId: tweets[0].threadId,
-  //       position: index + 1,
-  //     };
-
-  //     const newTweets = [...tweets];
-  //     newTweets.splice(index + 1, 0, newTweet);
-  //     setTweets(newTweets);
-  //   }
-
-  //   setTimeout(() => {
-  //     const nextTextarea = textareaRefs.current[index + 1];
-  //     if (nextTextarea) {
-  //       nextTextarea.focus();
-  //     }
-  //   }, 0);
-  // };
-
   const addTweetToThread = (index: number) => {
     // Generate a new threadId when converting to a thread
 
     if (!threadId) {
       const newThreadId = `thread-${uuidv4()}`;
-
       setThreadId(newThreadId);
     }
 
@@ -343,27 +290,6 @@ export default function PlayGround({
     }, 0);
   };
 
-  // const handlePublish = () => {
-  //   const updatedTweets = tweets.map((tweet) => ({
-  //     ...tweet,
-  //     status: "published" as const,
-  //   }));
-
-  //   if (isThread) {
-  //     const thread: Thread = {
-  //       id: threadId,
-  //       tweetIds: updatedTweets.map((t) => t.id),
-  //       createdAt: new Date(),
-  //       status: "published",
-  //     };
-  //     tweetStorage.saveThread(thread, updatedTweets, true);
-  //   } else {
-  //     tweetStorage.saveTweet(updatedTweets[0], true);
-  //   }
-
-  //   hideEditor();
-  //   refreshSidebar();
-  // };
   const handlePublish = () => {
     const updatedTweets = tweets.map((tweet) => ({
       ...tweet,
@@ -385,23 +311,6 @@ export default function PlayGround({
     hideEditor();
     refreshSidebar();
   };
-
-  // const handleSaveAsDraft = () => {
-  //   if (isThread) {
-  //     const thread: Thread = {
-  //       id: threadId,
-  //       tweetIds: tweets.map((t) => t.id),
-  //       createdAt: new Date(),
-  //       status: "draft",
-  //     };
-  //     tweetStorage.saveThread(thread, tweets, true);
-  //   } else {
-  //     tweetStorage.saveTweet(tweets[0], true);
-  //   }
-
-  //   hideEditor();
-  //   refreshSidebar();
-  // };
 
   const handleSaveAsDraft = () => {
     if (isThread && threadId) {
@@ -430,17 +339,6 @@ export default function PlayGround({
     element.style.height = "auto";
     element.style.height = `${element.scrollHeight}px`;
   };
-
-  // Add before the return statement
-  // Debug check for duplicate IDs
-  useEffect(() => {
-    const ids = tweets.map((t) => t.id);
-    const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
-    if (duplicates.length > 0) {
-      console.warn("Duplicate tweet IDs found:", duplicates);
-      console.log("Current tweets:", tweets);
-    }
-  }, [tweets]);
 
   if (isLoading) {
     return (

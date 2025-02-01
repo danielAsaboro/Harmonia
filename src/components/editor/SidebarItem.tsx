@@ -22,9 +22,8 @@ export function SidebarItem({
   const menuRef = useRef<HTMLDivElement>(null);
   const isThread = "tweetIds" in item;
 
-  // console.log("is thread? :", isThread);
-
-  // Get preview content - first tweet for threads, or the tweet content itself
+  // Get preview content
+  // - first tweet for threads, or the tweet content itself
   const preview = isThread
     ? tweetStorage.getThreadPreview(item.id)?.content || ""
     : (item as Tweet).content;
