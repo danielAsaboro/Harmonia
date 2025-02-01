@@ -6,7 +6,7 @@ import PlayGround from "@/components/editor/Main";
 import { PenSquare } from "lucide-react";
 
 function WelcomeScreen() {
-  const { showEditor } = useEditor();
+  const { showEditor, refreshSidebar } = useEditor();
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">

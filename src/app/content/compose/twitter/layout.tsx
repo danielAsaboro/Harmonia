@@ -15,7 +15,7 @@ function EditorSidebar() {
     editorState,
     showEditor,
     hideEditor,
-    refreshSidebar,
+    refreshCounter,
   } = useEditor();
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [items, setItems] = useState<(Tweet | Thread)[]>([]);
@@ -31,7 +31,7 @@ function EditorSidebar() {
     } else {
       setCurrentDraft(null);
     }
-  }, [editorState.selectedDraftId]);
+  }, [editorState.selectedDraftId, refreshCounter]);
 
   // Load items whenever storage changes or tab changes
   useEffect(() => {
@@ -71,10 +71,23 @@ function EditorSidebar() {
 
     // Initial load
     loadItems();
-  }, [activeTab, refreshSidebar]);
+  }, [activeTab, refreshCounter]);
 
   const createNewDraft = () => {
-    showEditor();
+    // Check if there's already an empty draft in progress
+    const emptyDraft = items.find(
+      (item) =>
+        !("tweetIds" in item) && // Check it's not a thread
+        !item.content?.trim() && // No content
+        (!item.media || item.media.length === 0) // No media
+    );
+
+    if (emptyDraft) {
+      showEditor(emptyDraft.id, "tweet");
+    } else {
+      // Create new draft
+      showEditor();
+    }
     setIsCreatingNew(false);
   };
 
@@ -116,6 +129,7 @@ function EditorSidebar() {
                 !currentDraft.content.trim() &&
                 (!currentDraft.media || currentDraft.media.length === 0)
               ) {
+                showEditor(currentDraft?.id, "tweet");
                 return; // Don't create new if current is empty
               }
               createNewDraft();

@@ -38,9 +38,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   const showEditor = useCallback(
     (draftId?: string, type?: "tweet" | "thread") => {
-      // If no draftId is provided, we're creating a new draft
+      // If no draftId is provided,
+      //  we're creating a new draft
       if (!draftId) {
-        const newId = uuidv4();
+        const newId = `tweet-${uuidv4()}`;
         const newTweet: Tweet = {
           id: newId,
           content: "",
@@ -49,9 +50,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           status: "draft",
         };
 
-        // // Save the new tweet immediately
-        // storage.saveTweet(newTweet);
-        // Save the new tweet immediately - Added this line
+        //  Save the new tweet immediately
+
         tweetStorage.saveTweet(newTweet, true);
 
         // Set editor state for the new draft
@@ -70,6 +70,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           selectedDraftId: draftId,
           selectedDraftType: type || "tweet",
         });
+
+        setRefreshCounter((prev) => prev + 1);
       }
     },
     []

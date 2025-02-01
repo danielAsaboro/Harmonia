@@ -34,7 +34,9 @@ export default function PlayGround({
     isProcessing: false,
   });
   const [isThread, setIsThread] = useState(false);
-  const [threadId] = useState<string>(uuidv4());
+  // const [threadId] = useState<string>(uuidv4());
+  // const [threadId] = useState<string>(() => `thread-${uuidv4()}`);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
 
@@ -53,7 +55,7 @@ export default function PlayGround({
         }
       } else {
         const newTweet: Tweet = {
-          id: uuidv4(),
+          id: `tweet-${uuidv4()}`,
           content: "",
           media: [],
           createdAt: new Date(),
@@ -69,6 +71,19 @@ export default function PlayGround({
     initializeEditor();
   }, [draftId, draftType, loadDraft]);
 
+  // Add effect to manage threadId
+  useEffect(() => {
+    // If it's a thread draft, use its existing threadId
+    if (draftType === "thread" && draftId) {
+      const thread = tweetStorage.getThreads().find((t) => t.id === draftId);
+      setThreadId(thread?.id || `thread-${uuidv4()}`);
+    }
+    // For new tweets or single tweets, set threadId to null
+    else {
+      setThreadId(null);
+    }
+  }, [draftId, draftType]);
+
   // Save and sync whenever tweets change
   useEffect(() => {
     if (!isLoading && tweets.length > 0) {
@@ -80,9 +95,9 @@ export default function PlayGround({
       }));
 
       try {
-        if (isThread) {
+        if (isThread && threadId) {
           const thread: Thread = {
-            id: draftId || threadId,
+            id: threadId,
             tweetIds: tweets.map((t) => t.id),
             createdAt: new Date(),
             status: "draft",
@@ -138,25 +153,20 @@ export default function PlayGround({
       content: newContent,
     };
 
-    if (!newContent.trim() && !newTweets[index].media?.length) {
-      if (newTweets.length > 1) {
-        newTweets.splice(index, 1);
-        setIsThread(newTweets.length > 1);
-      } else {
-        // Generate new ID only when creating new tweet
-        const newId = `empty-${uuidv4()}`;
-        newTweets[0] = {
-          ...newTweets[0],
-          id: newId,
-          content: "",
-          media: [],
-          createdAt: new Date(),
-          status: "draft",
-        };
-      }
-    }
-
     setTweets(ensureUniqueIds(newTweets));
+
+    // Immediate save of current tweet
+    if (isThread && threadId) {
+      const thread: Thread = {
+        id: threadId,
+        tweetIds: newTweets.map((t) => t.id),
+        createdAt: new Date(),
+        status: "draft",
+      };
+      tweetStorage.saveThread(thread, newTweets, true);
+    } else {
+      tweetStorage.saveTweet(newTweets[0], true);
+    }
   };
 
   const handleDeleteTweet = (index: number) => {
@@ -222,27 +232,109 @@ export default function PlayGround({
     }
   };
 
+  // Then modify createNewTweet:
+  // const createNewTweet = (index: number) => {
+  //   if (!isThread) {
+  //     // Converting single tweet to thread - generate new threadId
+  //     const newThreadId = `thread-${uuidv4()}`; // Ensure thread ID is different from tweet IDs
+
+  //     // Update the first tweet with new thread ID
+  //     const firstTweet = {
+  //       ...tweets[0],
+  //       threadId: newThreadId,
+  //       position: 0,
+  //       id: tweets[0].id, // Keep original tweet ID
+  //     };
+
+  //     // Create new tweet with unique ID
+  //     const newTweet = {
+  //       id: `tweet-${uuidv4()}`,
+  //       content: "",
+  //       media: [],
+  //       createdAt: new Date(),
+  //       status: "draft" as const,
+  //       threadId: newThreadId,
+  //       position: 1,
+  //     };
+
+  //     setTweets([firstTweet, newTweet]);
+  //     setIsThread(true);
+  //   } else {
+  //     // Already a thread, just add new tweet
+  //     const newTweet = {
+  //       id: `tweet-${uuidv4()}`,
+  //       content: "",
+  //       media: [],
+  //       createdAt: new Date(),
+  //       status: "draft" as const,
+  //       threadId: tweets[0].threadId,
+  //       position: index + 1,
+  //     };
+
+  //     const newTweets = [...tweets];
+  //     newTweets.splice(index + 1, 0, newTweet);
+  //     setTweets(newTweets);
+  //   }
+
+  //   setTimeout(() => {
+  //     const nextTextarea = textareaRefs.current[index + 1];
+  //     if (nextTextarea) {
+  //       nextTextarea.focus();
+  //     }
+  //   }, 0);
+  // };
+
+  const addTweetToThread = (index: number) => {
+    // Generate a new threadId when converting to a thread
+
+    if (!threadId) {
+      const newThreadId = `thread-${uuidv4()}`;
+
+      setThreadId(newThreadId);
+    }
+
+    createNewTweet(index);
+  };
   const createNewTweet = (index: number) => {
-    const newTweet: Tweet = {
-      id: uuidv4(),
-      content: "",
-      media: [],
-      createdAt: new Date(),
-      status: "draft",
-      threadId: isThread ? draftId || threadId : undefined,
-      position: index + 1,
-    };
+    if (!isThread) {
+      // Generate a new threadId when converting to a thread
+      const newThreadId = `thread-${uuidv4()}`;
+      setThreadId(newThreadId);
 
-    // Ensure all tweets have unique IDs
-    const newTweets = tweets.map((tweet) => ({
-      ...tweet,
-      id: tweet.id || uuidv4(), // Ensure existing tweets have IDs
-    }));
-    newTweets.splice(index + 1, 0, newTweet);
+      const firstTweet = {
+        ...tweets[0],
+        threadId: newThreadId,
+        position: 0,
+      };
 
-    setTweets(newTweets);
-    setIsThread(true);
+      const newTweet = {
+        id: `tweet-${uuidv4()}`,
+        content: "",
+        media: [],
+        createdAt: new Date(),
+        status: "draft" as const,
+        threadId: newThreadId,
+        position: 1,
+      };
 
+      setTweets([firstTweet, newTweet]);
+      setIsThread(true);
+    } else {
+      // For existing threads, use current threadId
+      const newTweet = {
+        id: `tweet-${uuidv4()}`,
+        content: "",
+        media: [],
+        createdAt: new Date(),
+        status: "draft" as const,
+        threadId: threadId || `thread-${uuidv4()}`,
+        position: index + 1,
+      };
+
+      const newTweets = [...tweets];
+      newTweets.splice(index + 1, 0, newTweet);
+      setTweets(newTweets);
+    }
     setTimeout(() => {
       const nextTextarea = textareaRefs.current[index + 1];
       if (nextTextarea) {
@@ -251,15 +343,36 @@ export default function PlayGround({
     }, 0);
   };
 
+  // const handlePublish = () => {
+  //   const updatedTweets = tweets.map((tweet) => ({
+  //     ...tweet,
+  //     status: "published" as const,
+  //   }));
+
+  //   if (isThread) {
+  //     const thread: Thread = {
+  //       id: threadId,
+  //       tweetIds: updatedTweets.map((t) => t.id),
+  //       createdAt: new Date(),
+  //       status: "published",
+  //     };
+  //     tweetStorage.saveThread(thread, updatedTweets, true);
+  //   } else {
+  //     tweetStorage.saveTweet(updatedTweets[0], true);
+  //   }
+
+  //   hideEditor();
+  //   refreshSidebar();
+  // };
   const handlePublish = () => {
     const updatedTweets = tweets.map((tweet) => ({
       ...tweet,
       status: "published" as const,
     }));
 
-    if (isThread) {
+    if (isThread && threadId) {
       const thread: Thread = {
-        id: draftId || threadId,
+        id: threadId,
         tweetIds: updatedTweets.map((t) => t.id),
         createdAt: new Date(),
         status: "published",
@@ -273,10 +386,27 @@ export default function PlayGround({
     refreshSidebar();
   };
 
+  // const handleSaveAsDraft = () => {
+  //   if (isThread) {
+  //     const thread: Thread = {
+  //       id: threadId,
+  //       tweetIds: tweets.map((t) => t.id),
+  //       createdAt: new Date(),
+  //       status: "draft",
+  //     };
+  //     tweetStorage.saveThread(thread, tweets, true);
+  //   } else {
+  //     tweetStorage.saveTweet(tweets[0], true);
+  //   }
+
+  //   hideEditor();
+  //   refreshSidebar();
+  // };
+
   const handleSaveAsDraft = () => {
-    if (isThread) {
+    if (isThread && threadId) {
       const thread: Thread = {
-        id: draftId || threadId,
+        id: threadId,
         tweetIds: tweets.map((t) => t.id),
         createdAt: new Date(),
         status: "draft",
@@ -410,11 +540,12 @@ export default function PlayGround({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && e.shiftKey) {
                       e.preventDefault();
-                      createNewTweet(index);
+                      addTweetToThread(index);
                     }
                   }}
                 />
 
+                {/* Media Preview */}
                 {tweet.media && tweet.media.length > 0 && (
                   <div className="mt-2">
                     <MediaPreview
@@ -427,11 +558,15 @@ export default function PlayGround({
                   </div>
                 )}
 
+                {/* Extra Options*/}
                 <div className="mt-4 flex items-center justify-between">
+                  {/* Front Side */}
                   <MediaUpload
                     onUpload={(files) => handleMediaUpload(index, files)}
                     maxFiles={4 - (tweet.media?.length || 0)}
                   />
+
+                  {/* Right Side */}
                   <div
                     className={
                       currentlyEditedTweet === index
@@ -444,7 +579,7 @@ export default function PlayGround({
                       position={index + 1}
                       totalTweets={tweets.length}
                     />
-                    <AddTweetButton onClick={() => createNewTweet(index)} />
+                    <AddTweetButton onClick={() => addTweetToThread(index)} />
                   </div>
                 </div>
               </div>
