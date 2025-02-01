@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
-import { storage } from "@/utils/localStorage";
 import { v4 as uuidv4 } from "uuid";
+import { tweetStorage } from "@/services/tweetStorage";
 
 type Tab = "drafts" | "scheduled" | "published";
 
@@ -49,8 +49,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           status: "draft",
         };
 
-        // Save the new tweet immediately
-        storage.saveTweet(newTweet);
+        // // Save the new tweet immediately
+        // storage.saveTweet(newTweet);
+        // Save the new tweet immediately - Added this line
+        tweetStorage.saveTweet(newTweet, true);
 
         // Set editor state for the new draft
         setEditorState({
@@ -88,14 +90,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (editorState.selectedDraftType === "tweet") {
-      const tweets = storage.getTweets();
+      const tweets = tweetStorage.getTweets();
       return tweets.find((t) => t.id === editorState.selectedDraftId) || null;
     } else {
-      const threads = storage.getThreads();
+      const threads = tweetStorage.getThreads();
       const thread = threads.find((t) => t.id === editorState.selectedDraftId);
 
       if (thread) {
-        const tweets = storage
+        const tweets = tweetStorage
           .getTweets()
           .filter((t) => t.threadId === thread.id)
           .sort((a, b) => (a.position || 0) - (b.position || 0));

@@ -1,10 +1,7 @@
 // components/editor/Main.tsx
 "use client";
-import { debounce } from "lodash";
-
 import React, { useState, useRef, useEffect } from "react";
 import { Tweet, Thread, UnifiedTweetComposerProps } from "@/types/tweet";
-import { storage } from "@/utils/localStorage";
 import MediaUpload from "./media/MediaUpload";
 import MediaPreview from "./media/MediaPreview";
 import ThreadPreview from "./ThreadPreview";
@@ -16,54 +13,55 @@ import { SaveStatus } from "./storage/SaveStatus";
 import { getMediaFile, removeMediaFile, storeMediaFile } from "./media";
 import { useUserAccount } from "./context/account";
 import CharacterCount, { AddTweetButton, ThreadPosition } from "./extras";
+import { tweetStorage } from "@/services/tweetStorage";
+import { SaveState } from "./storage";
 
 export default function PlayGround({
   draftId,
   draftType,
 }: UnifiedTweetComposerProps) {
   const { name: userName, handle: userTwitterHandle } = useUserAccount();
-  const { hideEditor, loadDraft, refreshSidebar } = useEditor();
+  const { hideEditor, loadDraft, refreshSidebar, activeTab } = useEditor();
   const [isLoading, setIsLoading] = useState(true);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [tweets, setTweets] = useState<Tweet[]>([]);
+  const [saveState, setSaveState] = useState<SaveState>({
+    lastSaveAttempt: null,
+    lastSuccessfulSave: null,
+    pendingOperations: 0,
+    errorCount: 0,
+    isProcessing: false,
+  });
   const [isThread, setIsThread] = useState(false);
   const [threadId] = useState<string>(uuidv4());
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
-  const lastSaveRef = useRef<number>(Date.now());
-  const [currentDraftId, setCurrentDraftId] = useState<string | null>(draftId);
-  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
 
   // Initialize editor with proper state
   useEffect(() => {
     const initializeEditor = async () => {
       if (draftId) {
-        // Editing existing draft
         const draft = loadDraft();
         if (draft) {
-          if ("tweetIds" in draft) {
+          if ("tweets" in draft) {
             setIsThread(true);
-            setTweets(draft.tweets || []);
-            setCurrentThreadId(draft.id);
+            setTweets(draft.tweets);
           } else {
             setTweets([draft as Tweet]);
           }
-          setCurrentDraftId(draftId);
         }
       } else {
-        // Creating new draft
-        const newTweetId = uuidv4();
-        setCurrentDraftId(newTweetId);
-        setTweets([
-          {
-            id: newTweetId,
-            content: "",
-            media: [],
-            createdAt: new Date(),
-            status: "draft",
-          },
-        ]);
+        const newTweet: Tweet = {
+          id: uuidv4(),
+          content: "",
+          media: [],
+          createdAt: new Date(),
+          status: "draft",
+        };
+        setTweets([newTweet]);
+        tweetStorage.saveTweet(newTweet, true);
+        refreshSidebar();
       }
       setIsLoading(false);
     };
@@ -71,151 +69,85 @@ export default function PlayGround({
     initializeEditor();
   }, [draftId, draftType, loadDraft]);
 
-  // Important: Clean up function
-  // to reset state when component unmounts
+  // Save and sync whenever tweets change
   useEffect(() => {
-    return () => {
-      setCurrentDraftId(null);
-      setCurrentThreadId(null);
-      setTweets([]);
-      setIsThread(false);
-    };
+    if (!isLoading && tweets.length > 0) {
+      setSaveState((prev) => ({
+        ...prev,
+        isProcessing: true,
+        pendingOperations: prev.pendingOperations + 1,
+        lastSaveAttempt: new Date(),
+      }));
+
+      try {
+        if (isThread) {
+          const thread: Thread = {
+            id: draftId || threadId,
+            tweetIds: tweets.map((t) => t.id),
+            createdAt: new Date(),
+            status: "draft",
+          };
+          tweetStorage.saveThread(thread, tweets);
+        } else {
+          tweetStorage.saveTweet(tweets[0]);
+        }
+
+        setSaveState((prev) => ({
+          ...prev,
+          isProcessing: false,
+          pendingOperations: Math.max(0, prev.pendingOperations - 1),
+          lastSuccessfulSave: new Date(),
+          errorCount: 0,
+        }));
+        refreshSidebar();
+      } catch (error) {
+        setSaveState((prev) => ({
+          ...prev,
+          isProcessing: false,
+          errorCount: prev.errorCount + 1,
+          pendingOperations: Math.max(0, prev.pendingOperations - 1),
+        }));
+        console.error("Error saving tweets:", error);
+      }
+    }
+  }, [tweets, isThread, draftId, threadId, isLoading]);
+
+  // Clean up when component unmounts
+  useEffect(() => {
+    return () => setTweets([]);
   }, []);
 
-  // Save helpers
-  const saveCurrentState = (immediate = false) => {
-    if (isThread) {
-      const thread: Thread = {
-        id: draftId || threadId,
-        tweetIds: tweets.map((t) => t.id),
-        createdAt: new Date(),
-        status: "draft",
-      };
-
-      // Save both thread and tweets atomically
-      // saveThreadWithTweets(thread, tweets);
-      refreshSidebar();
-    } else {
-      // Single tweet
-      // saveTweet(tweets[0], immediate);
-      refreshSidebar();
-    }
-  };
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        saveCurrentState(true); // Immediate save on keyboard shortcut
+  const ensureUniqueIds = (tweetsArray: Tweet[]): Tweet[] => {
+    const seenIds = new Set<string>();
+    return tweetsArray.map((tweet, index) => {
+      if (!tweet.id || seenIds.has(tweet.id)) {
+        // Generate new ID if missing or duplicate
+        const newId = `${uuidv4()}-${index}`;
+        seenIds.add(newId);
+        return { ...tweet, id: newId };
       }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [tweets, isThread]);
-
-  const setTextAreaRef = (el: HTMLTextAreaElement | null, index: number) => {
-    if (el) {
-      textareaRefs.current[index] = el;
-    }
-  };
-
-  const saveData = () => {
-    lastSaveRef.current = Date.now();
-
-    if (isThread) {
-      const thread: Thread = {
-        id: draftId || threadId,
-        tweetIds: tweets.map((t) => t.id),
-        createdAt: new Date(),
-        status: "draft",
-      };
-      storage.saveThread(thread);
-    }
-
-    tweets.forEach((tweet, index) => {
-      if (isThread) {
-        tweet.threadId = draftId || threadId;
-        tweet.position = index;
-      }
-      // storage.saveTweet(tweet);
+      seenIds.add(tweet.id);
+      return tweet;
     });
   };
 
-  const debouncedSave = useRef(
-    debounce((tweetsToSave: Tweet[], isThreadState: boolean) => {
-      lastSaveRef.current = Date.now();
-
-      if (isThreadState) {
-        const thread: Thread = {
-          id: draftId || threadId,
-          tweetIds: tweetsToSave.map((t) => t.id),
-          createdAt: new Date(),
-          status: "draft",
-        };
-        storage.saveThread(thread);
-      }
-
-      tweetsToSave.forEach((tweet, index) => {
-        if (isThreadState) {
-          tweet.threadId = draftId || threadId;
-          tweet.position = index;
-        }
-        // storage.saveTweet(tweet);
-      });
-    }, 1000) // 1 second delay
-  ).current;
-
-  const updateTweetsAndSave = (newTweets: Tweet[]) => {
-    setTweets(newTweets);
-    debouncedSave(newTweets, newTweets.length > 1);
-  };
-
-  // Existing useEffect for autosave
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Date.now() - lastSaveRef.current >= 15000) {
-        saveData();
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [tweets, isThread]);
-
-  // Existing useEffect for keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        saveData();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [tweets, isThread]);
-
   const handleTweetChange = (index: number, newContent: string) => {
     const newTweets = [...tweets];
-
-    // Update content
     newTweets[index] = {
       ...newTweets[index],
       content: newContent,
     };
 
-    // Handle empty tweet
-    if (
-      !newContent.trim() &&
-      (!newTweets[index].media || newTweets[index].media.length === 0)
-    ) {
+    if (!newContent.trim() && !newTweets[index].media?.length) {
       if (newTweets.length > 1) {
         newTweets.splice(index, 1);
         setIsThread(newTweets.length > 1);
       } else {
+        // Generate new ID only when creating new tweet
+        const newId = `empty-${uuidv4()}`;
         newTweets[0] = {
-          id: uuidv4(),
+          ...newTweets[0],
+          id: newId,
           content: "",
           media: [],
           createdAt: new Date(),
@@ -224,42 +156,31 @@ export default function PlayGround({
       }
     }
 
-    setTweets(newTweets);
-
-    // Save changes
-    if (isThread) {
-      const updatedTweet = newTweets[index];
-      if (updatedTweet) {
-        // saveTweet(updatedTweet); // Debounced save for content changes
-      }
-    } else {
-      // saveTweet(newTweets[0]); // Debounced save for single tweet
-    }
+    setTweets(ensureUniqueIds(newTweets));
   };
 
   const handleDeleteTweet = (index: number) => {
     const newTweets = [...tweets];
 
     if (tweets.length === 1) {
-      // If it's the last tweet, create a fresh empty one
+      // Keep the same ID for the empty tweet
+      const currentId = newTweets[0].id;
       newTweets[0] = {
-        id: uuidv4(),
+        ...newTweets[0],
+        id: currentId,
         content: "",
         media: [],
         createdAt: new Date(),
         status: "draft",
       };
     } else {
-      // Otherwise delete it
       newTweets.splice(index, 1);
       setIsThread(newTweets.length > 1);
     }
 
     setTweets(newTweets);
-    debouncedSave(newTweets, newTweets.length > 1);
   };
 
-  // Handle media operations
   const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
     const newTweets = [...tweets];
     const currentMedia = newTweets[tweetIndex].media || [];
@@ -281,13 +202,6 @@ export default function PlayGround({
       };
 
       setTweets(newTweets);
-
-      // Immediate save for media operations
-      if (isThread) {
-        // saveTweet(newTweets[tweetIndex], true);
-      } else {
-        // saveTweet(newTweets[0], true);
-      }
     } catch (error) {
       console.error("Error uploading media:", error);
       alert("Failed to upload media");
@@ -301,17 +215,11 @@ export default function PlayGround({
 
     if (mediaId) {
       removeMediaFile(mediaId);
+      newTweets[tweetIndex].media = currentMedia.filter(
+        (_, i) => i !== mediaIndex
+      );
+      setTweets(newTweets);
     }
-
-    newTweets[tweetIndex].media = currentMedia.filter(
-      (_, i) => i !== mediaIndex
-    );
-    updateTweetsAndSave(newTweets);
-  };
-
-  const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
-    element.style.height = "auto";
-    element.style.height = `${element.scrollHeight}px`;
   };
 
   const createNewTweet = (index: number) => {
@@ -324,10 +232,15 @@ export default function PlayGround({
       threadId: isThread ? draftId || threadId : undefined,
       position: index + 1,
     };
-    const newTweets = [...tweets];
+
+    // Ensure all tweets have unique IDs
+    const newTweets = tweets.map((tweet) => ({
+      ...tweet,
+      id: tweet.id || uuidv4(), // Ensure existing tweets have IDs
+    }));
     newTweets.splice(index + 1, 0, newTweet);
-    // setTweets(newTweets);
-    updateTweetsAndSave(newTweets);
+
+    setTweets(newTweets);
     setIsThread(true);
 
     setTimeout(() => {
@@ -337,7 +250,7 @@ export default function PlayGround({
       }
     }, 0);
   };
-  // Handle publishing
+
   const handlePublish = () => {
     const updatedTweets = tweets.map((tweet) => ({
       ...tweet,
@@ -351,16 +264,53 @@ export default function PlayGround({
         createdAt: new Date(),
         status: "published",
       };
-
-      // Save thread and tweets with published status
-      // saveThreadWithTweets(thread, updatedTweets);
+      tweetStorage.saveThread(thread, updatedTweets, true);
     } else {
-      // Save single tweet with published status
-      // saveTweet(updatedTweets[0], true);
+      tweetStorage.saveTweet(updatedTweets[0], true);
     }
 
     hideEditor();
+    refreshSidebar();
   };
+
+  const handleSaveAsDraft = () => {
+    if (isThread) {
+      const thread: Thread = {
+        id: draftId || threadId,
+        tweetIds: tweets.map((t) => t.id),
+        createdAt: new Date(),
+        status: "draft",
+      };
+      tweetStorage.saveThread(thread, tweets, true);
+    } else {
+      tweetStorage.saveTweet(tweets[0], true);
+    }
+
+    hideEditor();
+    refreshSidebar();
+  };
+
+  const setTextAreaRef = (el: HTMLTextAreaElement | null, index: number) => {
+    if (el) {
+      textareaRefs.current[index] = el;
+    }
+  };
+
+  const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight}px`;
+  };
+
+  // Add before the return statement
+  // Debug check for duplicate IDs
+  useEffect(() => {
+    const ids = tweets.map((t) => t.id);
+    const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+    if (duplicates.length > 0) {
+      console.warn("Duplicate tweet IDs found:", duplicates);
+      console.log("Current tweets:", tweets);
+    }
+  }, [tweets]);
 
   if (isLoading) {
     return (
@@ -369,6 +319,12 @@ export default function PlayGround({
       </div>
     );
   }
+
+  // Ensure unique IDs before rendering
+  const tweetsWithUniqueIds = tweets.map((tweet, index) => ({
+    ...tweet,
+    id: tweet.id || `${uuidv4()}-${index}`, // Fallback ID includes index for uniqueness
+  }));
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -379,52 +335,50 @@ export default function PlayGround({
             onClick={hideEditor}
             className="p-2 hover:bg-gray-800 rounded-full"
           >
-            <X size={20} className="text-gray-400  hover:text-red-500" />
+            <X size={20} className="text-gray-400 hover:text-red-500" />
           </button>
-          {/* Add SaveStatus component here */}
-          {/* <SaveStatus saveState={} /> */}
         </div>
 
         {/* Header Right Side */}
-        <div className="flex items-center gap-3">
-          <button
-            className="px-4 py-1.5 text-gray-400 hover:bg-gray-800 rounded-full flex items-center gap-2"
-            onClick={() => setShowScheduler(true)}
-          >
-            <Clock size={18} />
-            Schedule
-          </button>
-          <button
-            onClick={handlePublish}
-            className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
-          >
-            <Send size={18} />
-            Publish
-          </button>
-        </div>
+        {activeTab === "drafts" && (
+          <div className="flex items-center gap-3">
+            <button
+              className="px-4 py-1.5 text-gray-400 hover:bg-gray-800 rounded-full flex items-center gap-2"
+              onClick={() => setShowScheduler(true)}
+            >
+              <Clock size={18} />
+              Schedule
+            </button>
+            <button
+              onClick={handlePublish}
+              className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
+            >
+              <Send size={18} />
+              Publish
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-gray-900 rounded-lg">
-        {tweets.map((tweet, index) => (
+        {tweetsWithUniqueIds.map((tweet, index) => (
           <div key={tweet.id} className="relative p-4">
-            {/* Thread line - now starts below the avatar */}
+            {/* Thread line */}
             {index < tweets.length - 1 && (
               <div
                 className="absolute left-10 w-0.5 bg-gray-800"
                 style={{
-                  top: "4rem", // Starts below the avatar
-                  bottom: "-1rem", // Extends to the next tweet
+                  top: "4rem",
+                  bottom: "-1rem",
                 }}
               />
             )}
 
             <div className="flex gap-3">
-              {/* Avatar */}
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 rounded-full bg-gray-800" />
               </div>
 
-              {/* User info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 text-gray-400">
@@ -441,12 +395,9 @@ export default function PlayGround({
                   )}
                 </div>
 
-                {/* Tweet content */}
                 <textarea
                   value={tweet.content}
-                  onFocus={() => {
-                    setCurrentlyEditedTweet(index);
-                  }}
+                  onFocus={() => setCurrentlyEditedTweet(index)}
                   onChange={(e) => {
                     handleTweetChange(index, e.target.value);
                     adjustTextareaHeight(e.target);
@@ -464,7 +415,6 @@ export default function PlayGround({
                   }}
                 />
 
-                {/* Media upload and character count */}
                 {tweet.media && tweet.media.length > 0 && (
                   <div className="mt-2">
                     <MediaPreview
@@ -484,7 +434,7 @@ export default function PlayGround({
                   />
                   <div
                     className={
-                      currentlyEditedTweet == index
+                      currentlyEditedTweet === index
                         ? "flex justify-evenly items-center gap-3"
                         : "hidden"
                     }
@@ -494,11 +444,7 @@ export default function PlayGround({
                       position={index + 1}
                       totalTweets={tweets.length}
                     />
-                    <AddTweetButton
-                      onClick={() => {
-                        createNewTweet(index);
-                      }}
-                    />
+                    <AddTweetButton onClick={() => createNewTweet(index)} />
                   </div>
                 </div>
               </div>
@@ -516,11 +462,11 @@ export default function PlayGround({
           Preview
         </button>
         <button
-          onClick={saveData}
+          onClick={handleSaveAsDraft}
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 rounded-full hover:bg-blue-600 text-white"
         >
           <Save size={18} />
-          Save {isThread ? "Thread" : "Tweet"}
+          Save {isThread ? "Thread" : "Tweet"} as draft
         </button>
       </div>
 
