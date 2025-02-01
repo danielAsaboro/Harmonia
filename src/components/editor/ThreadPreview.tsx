@@ -1,12 +1,12 @@
 // src/components/ThreadPreview.tsx
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Tweet } from "@/types/tweet";
 
 interface ThreadPreviewProps {
   tweets: Tweet[];
   onClose: () => void;
-  getMediaUrl: (id: string) => string | null;
+  getMediaUrl: (id: string) => Promise<string | null>; // Update type
 }
 
 export default function ThreadPreview({
@@ -14,6 +14,24 @@ export default function ThreadPreview({
   onClose,
   getMediaUrl,
 }: ThreadPreviewProps) {
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    const loadMediaUrls = async () => {
+      const urls: Record<string, string | null> = {};
+      for (const tweet of tweets) {
+        if (tweet.media && tweet.media.length > 0) {
+          for (const mediaId of tweet.media) {
+            urls[mediaId] = await getMediaUrl(mediaId);
+          }
+        }
+      }
+      setMediaUrls(urls);
+    };
+
+    loadMediaUrls();
+  }, [tweets, getMediaUrl]);
+
   const isImageUrl = (url: string) => {
     return url.match(/^data:image/);
   };
@@ -58,7 +76,7 @@ export default function ThreadPreview({
                   {tweet.media && tweet.media.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       {tweet.media.map((mediaId, mediaIndex) => {
-                        const url = getMediaUrl(mediaId);
+                        const url = mediaUrls[mediaId];
                         if (!url) return null;
 
                         return (

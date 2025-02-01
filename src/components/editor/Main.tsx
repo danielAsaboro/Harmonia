@@ -10,11 +10,12 @@ import { PenSquare, Eye, Save, Clock, Send, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import SchedulePicker from "./SchedulePicker";
 import { SaveStatus } from "./storage/SaveStatus";
-import { getMediaFile, removeMediaFile, storeMediaFile } from "./media";
+// import { getMediaFile, removeMediaFile, storeMediaFile } from "./media";
 import { useUserAccount } from "./context/account";
 import CharacterCount, { AddTweetButton, ThreadPosition } from "./extras";
 import { SaveState } from "./storage";
 import { tweetStorage } from "@/utils/localStorage";
+import { getMediaFile, removeMediaFile, storeMediaFile } from "./media/indexedDB";
 
 export default function PlayGround({
   draftId,
@@ -191,6 +192,33 @@ export default function PlayGround({
     setTweets(newTweets);
   };
 
+  // const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
+  //   const newTweets = [...tweets];
+  //   const currentMedia = newTweets[tweetIndex].media || [];
+  //   const totalFiles = currentMedia.length + files.length;
+
+  //   if (totalFiles > 4) {
+  //     alert("Maximum 4 media files per tweet");
+  //     return;
+  //   }
+
+  //   try {
+  //     const mediaIds = await Promise.all(
+  //       files.map((file) => storeMediaFile(file))
+  //     );
+
+  //     newTweets[tweetIndex] = {
+  //       ...newTweets[tweetIndex],
+  //       media: [...currentMedia, ...mediaIds],
+  //     };
+
+  //     setTweets(newTweets);
+  //   } catch (error) {
+  //     console.error("Error uploading media:", error);
+  //     alert("Failed to upload media");
+  //   }
+  // };
+
   const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
     const newTweets = [...tweets];
     const currentMedia = newTweets[tweetIndex].media || [];
@@ -202,16 +230,33 @@ export default function PlayGround({
     }
 
     try {
+      // Store media files and get their IDs
       const mediaIds = await Promise.all(
         files.map((file) => storeMediaFile(file))
       );
 
+      // Update the tweet's media array
       newTweets[tweetIndex] = {
         ...newTweets[tweetIndex],
         media: [...currentMedia, ...mediaIds],
       };
 
+      // Save the updated tweets
       setTweets(newTweets);
+
+      // If it's a thread, save with thread context
+      if (isThread && threadId) {
+        const thread: Thread = {
+          id: threadId,
+          tweetIds: newTweets.map((t) => t.id),
+          createdAt: new Date(),
+          status: "draft",
+        };
+        tweetStorage.saveThread(thread, newTweets, true);
+      } else {
+        // For single tweet
+        tweetStorage.saveTweet(newTweets[0], true);
+      }
     } catch (error) {
       console.error("Error uploading media:", error);
       alert("Failed to upload media");
