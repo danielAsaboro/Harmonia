@@ -15,6 +15,7 @@ import SchedulePicker from "./SchedulePicker";
 import { SaveStatus } from "./storage/SaveStatus";
 import { getMediaFile, removeMediaFile, storeMediaFile } from "./media";
 import { useUserAccount } from "./context/account";
+import CharacterCount, { AddTweetButton, ThreadPosition } from "./extras";
 
 export default function PlayGround({
   draftId,
@@ -32,6 +33,7 @@ export default function PlayGround({
   const lastSaveRef = useRef<number>(Date.now());
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(draftId);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
 
   // Initialize editor with proper state
   useEffect(() => {
@@ -312,6 +314,29 @@ export default function PlayGround({
     element.style.height = `${element.scrollHeight}px`;
   };
 
+  const createNewTweet = (index: number) => {
+    const newTweet: Tweet = {
+      id: uuidv4(),
+      content: "",
+      media: [],
+      createdAt: new Date(),
+      status: "draft",
+      threadId: isThread ? draftId || threadId : undefined,
+      position: index + 1,
+    };
+    const newTweets = [...tweets];
+    newTweets.splice(index + 1, 0, newTweet);
+    // setTweets(newTweets);
+    updateTweetsAndSave(newTweets);
+    setIsThread(true);
+
+    setTimeout(() => {
+      const nextTextarea = textareaRefs.current[index + 1];
+      if (nextTextarea) {
+        nextTextarea.focus();
+      }
+    }, 0);
+  };
   // Handle publishing
   const handlePublish = () => {
     const updatedTweets = tweets.map((tweet) => ({
@@ -419,6 +444,9 @@ export default function PlayGround({
                 {/* Tweet content */}
                 <textarea
                   value={tweet.content}
+                  onFocus={() => {
+                    setCurrentlyEditedTweet(index);
+                  }}
                   onChange={(e) => {
                     handleTweetChange(index, e.target.value);
                     adjustTextareaHeight(e.target);
@@ -431,27 +459,7 @@ export default function PlayGround({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && e.shiftKey) {
                       e.preventDefault();
-                      const newTweet: Tweet = {
-                        id: uuidv4(),
-                        content: "",
-                        media: [],
-                        createdAt: new Date(),
-                        status: "draft",
-                        threadId: isThread ? draftId || threadId : undefined,
-                        position: index + 1,
-                      };
-                      const newTweets = [...tweets];
-                      newTweets.splice(index + 1, 0, newTweet);
-                      // setTweets(newTweets);
-                      updateTweetsAndSave(newTweets);
-                      setIsThread(true);
-
-                      setTimeout(() => {
-                        const nextTextarea = textareaRefs.current[index + 1];
-                        if (nextTextarea) {
-                          nextTextarea.focus();
-                        }
-                      }, 0);
+                      createNewTweet(index);
                     }
                   }}
                 />
@@ -474,15 +482,24 @@ export default function PlayGround({
                     onUpload={(files) => handleMediaUpload(index, files)}
                     maxFiles={4 - (tweet.media?.length || 0)}
                   />
-                  <span
-                    className={`text-sm ${
-                      tweet.content.length > 280
-                        ? "text-red-500"
-                        : "text-gray-400"
-                    }`}
+                  <div
+                    className={
+                      currentlyEditedTweet == index
+                        ? "flex justify-evenly items-center gap-3"
+                        : "hidden"
+                    }
                   >
-                    {tweet.content.length}/280
-                  </span>
+                    <CharacterCount content={tweet.content} />
+                    <ThreadPosition
+                      position={index + 1}
+                      totalTweets={tweets.length}
+                    />
+                    <AddTweetButton
+                      onClick={() => {
+                        createNewTweet(index);
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

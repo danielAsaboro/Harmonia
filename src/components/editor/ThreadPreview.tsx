@@ -36,12 +36,9 @@ export default function ThreadPreview({
 
         <div className="space-y-4">
           {tweets.map((tweet, index) => (
-            <div
-              key={tweet.id}
-              className="relative border border-gray-800 rounded-lg p-4"
-            >
+            <div key={tweet.id} className="relative rounded-lg p-4">
               {index < tweets.length - 1 && (
-                <div className="absolute left-[29px] top-[72px] w-0.5 h-[calc(100%+16px)] bg-gray-800" />
+                <div className="absolute left-[38px] top-[36px] w-0.5 h-[calc(100%+16px)] bg-gray-800" />
               )}
 
               <div className="flex items-start space-x-3">
