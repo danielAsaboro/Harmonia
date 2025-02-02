@@ -1,80 +1,29 @@
 [
   {
-    "id": "tweet-9cc18b11-1595-4feb-aca9-bd3cf64097f6",
-    "content": "first tweet",
+    "id": "tweet-94776a78-c227-42e6-9889-2f85bcc9b946",
+    "content": "safdafa",
     "media": [],
-    "createdAt": "2025-02-01T17:23:15.692Z",
+    "createdAt": "2025-02-02T00:52:49.050Z",
     "status": "draft",
-    "lastSaved": "2025-02-01T17:25:38.841Z"
-  },
-  {
-    "id": "tweet-0e44918e-50b5-49ee-b1b9-57e30680e091",
-    "content": "god shit first thread",
-    "media": [],
-    "createdAt": "2025-02-01T17:23:19.942Z",
-    "status": "draft",
-    "threadId": "thread-7f91a67f-a691-4acf-bcf1-389578205db5",
-    "position": 0,
-    "lastSaved": "2025-02-01T17:25:40.367Z"
-  },
-  {
-    "id": "tweet-7b89de12-61b4-455b-a8e2-fdb9eea4ad17",
-    "content": "second tweet in thread",
-    "media": [],
-    "createdAt": "2025-02-01T17:23:23.262Z",
-    "status": "draft",
-    "threadId": "thread-7f91a67f-a691-4acf-bcf1-389578205db5",
-    "position": 1,
-    "lastSaved": "2025-02-01T17:25:40.367Z"
-  },
-  {
-    "id": "tweet-56106b11-4fa5-477f-a429-d29ccf830488",
-    "content": "third tweet in thread",
-    "media": [],
-    "createdAt": "2025-02-01T17:23:41.951Z",
-    "status": "draft",
-    "threadId": "thread-7f91a67f-a691-4acf-bcf1-389578205db5",
-    "position": 2,
-    "lastSaved": "2025-02-01T17:25:40.367Z"
-  },
-  {
-    "id": "tweet-71c5e51e-62fa-4703-a239-11c583ec0dd7",
-    "content": "tweet to be converted to thread",
-    "media": [],
-    "createdAt": "2025-02-01T17:23:50.408Z",
-    "status": "draft",
-    "lastSaved": "2025-02-01T17:25:47.168Z",
-    "threadId": "thread-d9db866b-1298-4ac3-89ab-97448fb8b435",
+    "lastSaved": "2025-02-02T00:54:26.543Z",
+    "threadId": "thread-bbbc8984-959c-4a6b-a8af-3e7efc4dea44",
     "position": 0
   },
   {
-    "id": "tweet-175bb3da-a1d1-4984-b5dc-8de50fda3933",
-    "content": "lol, work is finished; so proud of me self",
+    "id": "tweet-bfde46ba-8bb6-4c2f-95b5-3006e2252fe0",
+    "content": "fafdasfaf",
     "media": [],
-    "createdAt": "2025-02-01T17:24:01.652Z",
+    "createdAt": "2025-02-02T00:54:19.738Z",
     "status": "draft",
-    "threadId": "thread-d9db866b-1298-4ac3-89ab-97448fb8b435",
-    "position": 1,
-    "lastSaved": "2025-02-01T17:25:47.168Z"
+    "lastSaved": "2025-02-02T00:54:27.559Z"
   },
   {
-    "id": "tweet-8492578c-7497-43c5-a819-cbb82804d1e1",
-    "content": "lmao",
+    "id": "tweet-fc6eef1a-0b59-4559-b3b5-3c72ad3cea20",
+    "content": "dsafadsfa",
     "media": [],
-    "createdAt": "2025-02-01T17:24:22.752Z",
+    "createdAt": "2025-02-02T00:54:32.148Z",
     "status": "draft",
-    "threadId": "thread-d9db866b-1298-4ac3-89ab-97448fb8b435",
-    "position": 2,
-    "lastSaved": "2025-02-01T17:25:45.039Z"
-  },
-  {
-    "id": "tweet-4175661f-264a-4b89-a459-6dc48cb518e1",
-    "content": "say hi",
-    "media": [],
-    "createdAt": "2025-02-01T17:24:26.300Z",
-    "status": "draft",
-    "threadId": "thread-d9db866b-1298-4ac3-89ab-97448fb8b435",
-    "position": 3,
-    "lastSaved": "2025-02-01T17:25:40.367Z"
+    "threadId": "thread-bbbc8984-959c-4a6b-a8af-3e7efc4dea44",
+    "position": 1
   }
 ]

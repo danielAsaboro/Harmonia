@@ -38,8 +38,6 @@ export default function PlayGround({
     isProcessing: false,
   });
   const [isThread, setIsThread] = useState(false);
-  // const [threadId] = useState<string>(uuidv4());
-  // const [threadId] = useState<string>(() => `thread-${uuidv4()}`);
   const [threadId, setThreadId] = useState<string | null>(null);
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
@@ -173,64 +171,114 @@ export default function PlayGround({
     }
   };
 
-  const handleDeleteTweet = (index: number) => {
-    const newTweets = [...tweets];
+  const handleDeleteTweet = async (index: number) => {
+    try {
+      const newTweets = [...tweets];
+      const tweetToDelete = newTweets[index];
 
-    if (tweets.length === 1) {
-      // Keep the same ID for the empty tweet
-      const currentId = newTweets[0].id;
-      newTweets[0] = {
-        ...newTweets[0],
-        id: currentId,
-        content: "",
-        media: [],
-        createdAt: new Date(),
-        status: "draft",
-        threadId: undefined, // Remove threadId
-      };
-
-      // Completely remove the thread if it exists
-      if (threadId) {
-        // Delete the entire thread from storage
-        tweetStorage.deleteThread(threadId);
-
-        // Reset thread-related states
-        setThreadId(null);
-        setIsThread(false);
+      // Clean up media files before deleting tweet
+      if (tweetToDelete.media && tweetToDelete.media.length > 0) {
+        try {
+          await Promise.all(
+            tweetToDelete.media.map(async (mediaId) => {
+              try {
+                await removeMediaFile(mediaId);
+              } catch (mediaError) {
+                console.error(`Failed to remove media ${mediaId}:`, mediaError);
+              }
+            })
+          );
+        } catch (mediaError) {
+          console.error("Error cleaning up media files:", mediaError);
+        }
       }
-    } else {
-      // Removing a tweet from a multi-tweet thread
-      if (isThread && threadId) {
-        // Completely delete the entire thread
+
+      if (tweets.length === 1) {
+        // For the last tweet in any context (thread or standalone)
+        const currentId = newTweets[0].id;
+        const resetTweet = {
+          ...newTweets[0],
+          id: currentId,
+          content: "",
+          media: [], // Ensure media array is reset
+          createdAt: new Date(),
+          status: "draft" as const,
+          threadId: undefined,
+          position: undefined,
+        };
+
+        // If it was part of a thread, clean up thread
+        if (threadId) {
+          tweetStorage.deleteThread(threadId);
+          setThreadId(null);
+          setIsThread(false);
+        }
+
+        // Update local state and save
+        setTweets([resetTweet]);
+        tweetStorage.saveTweet(resetTweet, true);
+      } else if (tweets.length === 2 && isThread && threadId) {
+        // When we're about to delete one tweet from a two-tweet thread
+
+        // Remove the tweet to be deleted
+        newTweets.splice(index, 1);
+
+        // Convert remaining tweet to standalone
+        const remainingTweet = {
+          ...newTweets[0],
+          threadId: undefined,
+          position: undefined,
+        };
+
+        // Delete the thread since it's no longer needed
         tweetStorage.deleteThread(threadId);
 
-        // Convert remaining tweets to standalone tweets
-        const remainingTweets = newTweets
-          .filter((_, i) => i !== index)
-          .map((tweet) => ({
-            ...tweet,
-            threadId: undefined,
-            position: undefined,
-          }));
+        // Save the remaining tweet as standalone
+        tweetStorage.saveTweet(remainingTweet, true);
 
-        // Save each remaining tweet as a standalone tweet
-        remainingTweets.forEach((tweet) => {
-          tweetStorage.saveTweet(tweet, true);
-        });
-
-        // Reset thread states
+        // Update state
+        setTweets([remainingTweet]);
         setThreadId(null);
         setIsThread(false);
+      } else if (isThread && threadId) {
+        // For threads with more than 2 tweets
+
+        // First delete the tweet from storage
+        tweetStorage.deleteTweetFromThread(tweetToDelete.id);
+
+        // Remove the tweet from array
+        newTweets.splice(index, 1);
+
+        // Update positions for remaining tweets
+        const updatedTweets = newTweets.map((tweet, i) => ({
+          ...tweet,
+          position: i,
+        }));
+
+        // Update thread in storage with new tweet arrangement
+        const thread = {
+          id: threadId,
+          tweetIds: updatedTweets.map((t) => t.id),
+          createdAt: new Date(),
+          status: "draft" as const,
+        };
 
         // Update local state
-        newTweets.splice(index, 1);
-        setTweets(remainingTweets);
+        setTweets(updatedTweets);
+
+        // Save updated thread and tweets
+        tweetStorage.saveThread(thread, updatedTweets, true);
       } else {
-        // For standalone tweets, simply delete
+        // For standalone tweets
         tweetStorage.deleteTweet(newTweets[index].id);
         newTweets.splice(index, 1);
         setTweets(newTweets);
       }
+
+      refreshSidebar();
+    } catch (error) {
+      console.error("Error deleting tweet:", error);
+      alert("Failed to delete tweet. Please try again.");
     }
   };
 
