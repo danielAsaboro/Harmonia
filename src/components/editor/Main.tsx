@@ -25,7 +25,15 @@ export default function PlayGround({
   draftType,
 }: UnifiedTweetComposerProps) {
   const { name: userName, handle: userTwitterHandle } = useUserAccount();
-  const { hideEditor, loadDraft, refreshSidebar, activeTab } = useEditor();
+  const {
+    hideEditor,
+    loadDraft,
+    refreshSidebar,
+    activeTab,
+    setActiveTab,
+    loadScheduledItem,
+    editorState,
+  } = useEditor();
   const [isLoading, setIsLoading] = useState(true);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -43,35 +51,94 @@ export default function PlayGround({
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
 
   // Initialize editor with proper state
+  // useEffect(() => {
+  //   const initializeEditor = async () => {
+  //     if (draftId) {
+  //       const draft = loadDraft();
+  //       if (draft) {
+  //         if ("tweets" in draft) {
+  //           setIsThread(true);
+  //           setTweets(draft.tweets);
+  //         } else {
+  //           setTweets([draft as Tweet]);
+  //         }
+  //       }
+  //     } else {
+  //       const newTweet: Tweet = {
+  //         id: `tweet-${uuidv4()}`,
+  //         content: "",
+  //         media: [],
+  //         createdAt: new Date(),
+  //         status: "draft",
+  //       };
+  //       setTweets([newTweet]);
+  //       tweetStorage.saveTweet(newTweet, true);
+  //       refreshSidebar();
+  //     }
+  //     setIsLoading(false);
+  //   };
+
+  //   initializeEditor();
+  // }, [draftId, draftType, loadDraft]);
+
+  // Inside the useEffect for initialization
+  // Inside the useEffect for initialization in Main.tsx
+  // Inside the useEffect for initialization
   useEffect(() => {
     const initializeEditor = async () => {
       if (draftId) {
-        const draft = loadDraft();
+        // Load appropriate content
+        // based on draft type and status
+        const draft =
+          draftType === "thread"
+            ? activeTab === "scheduled"
+              ? loadScheduledItem()
+              : loadDraft()
+            : activeTab === "scheduled"
+            ? loadScheduledItem()
+            : loadDraft();
+
         if (draft) {
           if ("tweets" in draft) {
             setIsThread(true);
-            setTweets(draft.tweets);
+            setTweets(
+              draft.tweets.map((tweet) => ({
+                ...tweet,
+                status: draft.status,
+                scheduledFor: draft.scheduledFor,
+              }))
+            );
           } else {
             setTweets([draft as Tweet]);
           }
         }
       } else {
-        const newTweet: Tweet = {
-          id: `tweet-${uuidv4()}`,
-          content: "",
-          media: [],
-          createdAt: new Date(),
-          status: "draft",
-        };
-        setTweets([newTweet]);
-        tweetStorage.saveTweet(newTweet, true);
-        refreshSidebar();
+        // Only create new tweets in draft mode
+        if (activeTab === "drafts") {
+          const newTweet: Tweet = {
+            id: `tweet-${uuidv4()}`,
+            content: "",
+            media: [],
+            createdAt: new Date(),
+            status: "draft",
+          };
+          setTweets([newTweet]);
+          tweetStorage.saveTweet(newTweet, true);
+          refreshSidebar();
+        }
       }
       setIsLoading(false);
     };
 
     initializeEditor();
-  }, [draftId, draftType, loadDraft]);
+  }, [
+    draftId,
+    draftType,
+    loadDraft,
+    activeTab,
+    loadScheduledItem,
+    editorState.selectedItemStatus,
+  ]);
 
   // Add effect to manage threadId
   useEffect(() => {
@@ -149,6 +216,8 @@ export default function PlayGround({
   };
 
   const handleTweetChange = (index: number, newContent: string) => {
+    if (activeTab != "drafts") return;
+
     const newTweets = [...tweets];
     newTweets[index] = {
       ...newTweets[index],
@@ -157,7 +226,6 @@ export default function PlayGround({
 
     setTweets(ensureUniqueIds(newTweets));
 
-    // Immediate save of current tweet
     if (isThread && threadId) {
       const thread: Thread = {
         id: threadId,
@@ -341,6 +409,7 @@ export default function PlayGround({
   };
 
   const addTweetToThread = (index: number) => {
+    if (activeTab != "drafts") return;
     // Generate a new threadId when converting to a thread
 
     if (!threadId) {
@@ -396,6 +465,43 @@ export default function PlayGround({
         nextTextarea.focus();
       }
     }, 0);
+  };
+
+  const handleSchedulePost = (scheduledDate: Date) => {
+    try {
+      // Convert tweets to scheduled status
+      const updatedTweets = tweets.map((tweet) => ({
+        ...tweet,
+        status: "scheduled" as const,
+        scheduledFor: scheduledDate,
+      }));
+
+      if (isThread && threadId) {
+        // Handle thread scheduling
+        const thread: Thread = {
+          id: threadId,
+          tweetIds: updatedTweets.map((t) => t.id),
+          createdAt: updatedTweets[updatedTweets.length - 1].createdAt,
+          status: "scheduled",
+          scheduledFor: scheduledDate,
+        };
+
+        // Save the thread and its tweets
+        tweetStorage.saveThread(thread, updatedTweets, true);
+      } else {
+        // Handle single tweet scheduling
+        tweetStorage.saveTweet(updatedTweets[0], true);
+      }
+
+      // Close the scheduler and editor
+      setShowScheduler(false);
+      hideEditor();
+
+      // Refresh the sidebar to show the new scheduled post
+      refreshSidebar();
+    } catch (error) {
+      console.error("Error scheduling post:", error);
+    }
   };
 
   const handlePublish = () => {
@@ -464,8 +570,8 @@ export default function PlayGround({
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {/* Header Controls */}
       <div className="flex justify-between items-center mb-4">
-        {/* Header Left Side */}
         <div className="flex items-center gap-2">
           <button
             onClick={hideEditor}
@@ -475,26 +581,30 @@ export default function PlayGround({
           </button>
         </div>
 
-        {/* Header Right Side */}
-        {activeTab === "drafts" && (
-          <div className="flex items-center gap-3">
-            <SaveStatus saveState={saveState} />
-            <button
-              className="px-4 py-1.5 text-gray-400 hover:bg-gray-800 rounded-full flex items-center gap-2"
-              onClick={() => setShowScheduler(true)}
-            >
-              <Clock size={18} />
-              Schedule
-            </button>
-            <button
-              onClick={handlePublish}
-              className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
-            >
-              <Send size={18} />
-              Publish
-            </button>
-          </div>
-        )}
+        {/* Show different controls based on tab */}
+
+        <div className="flex items-center gap-3">
+          {activeTab === "drafts" ? (
+            <>
+              <SaveStatus saveState={saveState} />
+
+              <button
+                className="px-4 py-1.5 text-gray-400 hover:bg-gray-800 rounded-full flex items-center gap-2"
+                onClick={() => setShowScheduler(true)}
+              >
+                <Clock size={18} />
+                Schedule
+              </button>
+            </>
+          ) : undefined}
+          <button
+            onClick={handlePublish}
+            className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
+          >
+            <Send size={18} />
+            Publish
+          </button>
+        </div>
       </div>
 
       <div className="bg-gray-900 rounded-lg">
@@ -522,22 +632,26 @@ export default function PlayGround({
                     <span className="font-bold text-white">{userName}</span>
                     <span>{userTwitterHandle}</span>
                   </div>
-                  {(tweets.length === 1 || index > 0) && (
-                    <button
-                      onClick={() => handleDeleteTweet(index)}
-                      className="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-red-500"
-                    >
-                      <X size={18} />
-                    </button>
-                  )}
+                  {(tweets.length === 1 || index > 0) &&
+                    activeTab === "drafts" && (
+                      <button
+                        onClick={() => handleDeleteTweet(index)}
+                        className="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-red-500"
+                      >
+                        <X size={18} />
+                      </button>
+                    )}
                 </div>
 
+                {/* Make textarea readonly if not in drafts */}
                 <textarea
                   value={tweet.content}
                   onFocus={() => setCurrentlyEditedTweet(index)}
                   onChange={(e) => {
-                    handleTweetChange(index, e.target.value);
-                    adjustTextareaHeight(e.target);
+                    if (activeTab === "drafts") {
+                      handleTweetChange(index, e.target.value);
+                      adjustTextareaHeight(e.target);
+                    }
                   }}
                   placeholder={
                     index === 0 ? "What's happening?" : "Add to thread..."
@@ -545,11 +659,16 @@ export default function PlayGround({
                   className="w-full bg-transparent border-none resize-none focus:ring-0 focus:outline-none text-white min-h-[60px] mt-2"
                   ref={(el) => setTextAreaRef(el, index)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && e.shiftKey) {
+                    if (
+                      activeTab === "drafts" &&
+                      e.key === "Enter" &&
+                      e.shiftKey
+                    ) {
                       e.preventDefault();
                       addTweetToThread(index);
                     }
                   }}
+                  readOnly={activeTab !== "drafts"}
                 />
 
                 {/* Media Preview */}
@@ -557,10 +676,13 @@ export default function PlayGround({
                   <div className="mt-2">
                     <MediaPreview
                       mediaIds={tweet.media}
-                      onRemove={(mediaIndex) =>
-                        handleRemoveMedia(index, mediaIndex)
-                      }
+                      onRemove={(mediaIndex) => {
+                        activeTab === "scheduled"
+                          ? undefined
+                          : handleRemoveMedia(index, mediaIndex);
+                      }}
                       getMediaUrl={getMediaFile}
+                      isDraft={activeTab == "drafts"}
                     />
                   </div>
                 )}
@@ -571,9 +693,11 @@ export default function PlayGround({
                   <MediaUpload
                     onUpload={(files) => handleMediaUpload(index, files)}
                     maxFiles={4 - (tweet.media?.length || 0)}
+                    disabled={activeTab != "drafts"}
                   />
 
                   {/* Right Side */}
+
                   <div
                     className={
                       currentlyEditedTweet === index
@@ -586,7 +710,17 @@ export default function PlayGround({
                       position={index + 1}
                       totalTweets={tweets.length}
                     />
-                    <AddTweetButton onClick={() => addTweetToThread(index)} />
+                    {activeTab === "drafts" && (
+                      <div
+                        className={
+                          currentlyEditedTweet === index ? "" : "hidden"
+                        }
+                      >
+                        <AddTweetButton
+                          onClick={() => addTweetToThread(index)}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -603,13 +737,50 @@ export default function PlayGround({
           <Eye size={18} />
           Preview
         </button>
-        <button
-          onClick={handleSaveAsDraft}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 rounded-full hover:bg-blue-600 text-white"
-        >
-          <Save size={18} />
-          Save {isThread ? "Thread" : "Tweet"} as draft
-        </button>
+        {activeTab === "drafts" ? (
+          <button
+            onClick={handleSaveAsDraft}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 rounded-full hover:bg-blue-600 text-white"
+          >
+            <Save size={18} />
+            Save {isThread ? "Thread" : "Tweet"} as draft
+          </button>
+        ) : (
+          activeTab === "scheduled" && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  // Convert to draft
+                  const updatedTweets = tweets.map((tweet) => ({
+                    ...tweet,
+                    status: "draft" as const,
+                    scheduledFor: undefined,
+                  }));
+
+                  if (isThread && threadId) {
+                    const thread: Thread = {
+                      id: threadId,
+                      tweetIds: updatedTweets.map((t) => t.id),
+                      createdAt: new Date(),
+                      status: "draft",
+                    };
+                    tweetStorage.saveThread(thread, updatedTweets, true);
+                  } else {
+                    tweetStorage.saveTweet(updatedTweets[0], true);
+                  }
+
+                  hideEditor();
+                  setActiveTab("drafts");
+                  refreshSidebar();
+                }}
+                className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
+              >
+                <PenSquare size={18} />
+                Switch to Draft
+              </button>
+            </div>
+          )
+        )}
       </div>
 
       {showPreview && (
@@ -622,10 +793,7 @@ export default function PlayGround({
 
       {showScheduler && (
         <SchedulePicker
-          onSchedule={(date) => {
-            // Handle scheduling
-            setShowScheduler(false);
-          }}
+          onSchedule={handleSchedulePost}
           onCancel={() => setShowScheduler(false)}
         />
       )}

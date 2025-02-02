@@ -76,7 +76,12 @@ export function SidebarItem({
               {isThread ? "🧵 Thread" : "💭 Tweet"}
             </span>
             <span className="text-xs text-gray-500">
-              {new Date(item.createdAt).toLocaleDateString()}
+              {item.status === "scheduled" && item.scheduledFor
+                ? new Date(item.scheduledFor).toLocaleString("en-US", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })
+                : new Date(item.createdAt).toLocaleDateString()}
             </span>
           </div>
           <p className="text-gray-300 text-sm truncate">{truncatedPreview}</p>

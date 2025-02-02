@@ -61,7 +61,7 @@ export class TweetStorageService {
   getTweets(): Tweet[] {
     try {
       const tweets = localStorage.getItem(this.TWEETS_KEY);
-      console.log("retrieved tweets", tweets);
+      // console.log("retrieved tweets", tweets);
 
       return tweets ? JSON.parse(tweets) : [];
     } catch (error) {
@@ -172,7 +172,7 @@ export class TweetStorageService {
       localStorage.setItem(this.THREADS_KEY, JSON.stringify(threads));
 
       tweets.forEach((tweet) => {
-        this.saveTweet({ ...tweet, threadId: thread.id }, immediate);
+        this.saveTweet({ ...tweet, threadId: thread.id, status: tweet.status }, immediate);
       });
     } catch (error) {
       console.error("Error saving thread:", error);

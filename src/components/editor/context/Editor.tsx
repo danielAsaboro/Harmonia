@@ -1,6 +1,5 @@
-// components/Editor/EditorContext.tsx
+// components/Editor/Editor.tsx
 "use client";
-
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { v4 as uuidv4 } from "uuid";
@@ -12,6 +11,7 @@ type EditorState = {
   isVisible: boolean;
   selectedDraftId: string | null;
   selectedDraftType: "tweet" | "thread" | null;
+  selectedItemStatus?: Tab;
 };
 
 type EditorContextType = {
@@ -21,6 +21,7 @@ type EditorContextType = {
   showEditor: (draftId?: string, type?: "tweet" | "thread") => void;
   hideEditor: () => void;
   loadDraft: () => Tweet | ThreadWithTweets | null;
+  loadScheduledItem: () => Tweet | ThreadWithTweets | null;
   refreshSidebar: () => void;
   refreshCounter: number;
 };
@@ -36,45 +37,195 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     selectedDraftType: null,
   });
 
+  // const showEditor = useCallback(
+  //   (draftId?: string, type?: "tweet" | "thread") => {
+  //     console.log("active tab:", activeTab);
+  //     console.log("draft id: ", draftId);
+  //     if (activeTab == "drafts") {
+  //       console.log("inside draft conditional");
+
+  //       if (!draftId) {
+  //         console.log("No draft id");
+  //         const newId = `tweet-${uuidv4()}`;
+  //         const newTweet: Tweet = {
+  //           id: newId,
+  //           content: "",
+  //           media: [],
+  //           createdAt: new Date(),
+  //           status: "draft",
+  //         };
+
+  //         tweetStorage.saveTweet(newTweet, true);
+
+  //         setEditorState({
+  //           isVisible: true,
+  //           selectedDraftId: newId,
+  //           selectedDraftType: "tweet",
+  //           selectedItemStatus: activeTab,
+  //         });
+
+  //         setRefreshCounter((prev) => prev + 1);
+  //       } else {
+  //         console.log();
+
+  //         // For existing drafts, explicitly preserve status
+  //         let draftType = type;
+  //         if (!draftType) {
+  //           console.log("there's draft id but no draft type");
+
+  //           // Try to determine type from storage
+  //           const thread = tweetStorage
+  //             .getThreads()
+  //             .find((t) => t.id === draftId);
+  //           if (thread) {
+  //             draftType = "thread";
+  //           } else {
+  //             const tweet = tweetStorage
+  //               .getTweets()
+  //               .find((t) => t.id === draftId);
+  //             if (tweet) {
+  //               draftType = "tweet";
+  //             }
+  //           }
+  //         }
+
+  //         setEditorState({
+  //           isVisible: true,
+  //           selectedDraftId: draftId,
+  //           selectedDraftType: draftType || "tweet",
+  //           selectedItemStatus: activeTab,
+  //         });
+
+  //         setRefreshCounter((prev) => prev + 1);
+  //       }
+  //     } else if (activeTab == "scheduled") {
+  //       //
+  //       console.log("inside scheduled conditional");
+  //     }
+  //   },
+  //   [activeTab]
+  // );
+
   const showEditor = useCallback(
     (draftId?: string, type?: "tweet" | "thread") => {
-      // If no draftId is provided,
-      //  we're creating a new draft
-      if (!draftId) {
-        const newId = `tweet-${uuidv4()}`;
-        const newTweet: Tweet = {
-          id: newId,
-          content: "",
-          media: [],
-          createdAt: new Date(),
-          status: "draft",
-        };
+      console.log("=== showEditor called ===");
+      console.log("Current active tab:", activeTab);
+      console.log("Received draftId:", draftId);
+      console.log("Received type:", type);
 
-        //  Save the new tweet immediately
-
-        tweetStorage.saveTweet(newTweet, true);
-
-        // Set editor state for the new draft
-        setEditorState({
-          isVisible: true,
-          selectedDraftId: newId,
-          selectedDraftType: "tweet",
-        });
-
-        // Force refresh to update sidebar
-        setRefreshCounter((prev) => prev + 1);
-      } else {
-        // Opening an existing draft
-        setEditorState({
-          isVisible: true,
-          selectedDraftId: draftId,
-          selectedDraftType: type || "tweet",
-        });
-
-        setRefreshCounter((prev) => prev + 1);
+      if (activeTab === "scheduled") {
+        // For scheduled items, just show the preview
+        if (draftId) {
+          setEditorState({
+            isVisible: true,
+            selectedDraftId: draftId,
+            selectedDraftType: type || "tweet",
+            selectedItemStatus: activeTab,
+          });
+        }
+        return;
       }
+
+      if (activeTab == "drafts") {
+        console.log("Inside drafts conditional");
+
+        if (!draftId) {
+          console.log("No draft id - creating new tweet");
+          const newId = `tweet-${uuidv4()}`;
+          const newTweet: Tweet = {
+            id: newId,
+            content: "",
+            media: [],
+            createdAt: new Date(),
+            status: "draft",
+          };
+
+          tweetStorage.saveTweet(newTweet, true);
+          console.log("Created new tweet:", newTweet);
+
+          setEditorState({
+            isVisible: true,
+            selectedDraftId: newId,
+            selectedDraftType: "tweet",
+            selectedItemStatus: activeTab,
+          });
+          console.log("Set editor state for new tweet");
+
+          setRefreshCounter((prev) => prev + 1);
+        } else {
+          console.log("Has draft id");
+
+          let draftType = type;
+          if (!draftType) {
+            console.log("Determining type from storage");
+
+            const thread = tweetStorage
+              .getThreads()
+              .find((t) => t.id === draftId);
+            if (thread) {
+              console.log("Found thread:", thread);
+              draftType = "thread";
+            } else {
+              const tweet = tweetStorage
+                .getTweets()
+                .find((t) => t.id === draftId);
+              if (tweet) {
+                console.log("Found tweet:", tweet);
+                draftType = "tweet";
+              }
+            }
+          }
+
+          console.log("Setting editor state with type:", draftType);
+          setEditorState({
+            isVisible: true,
+            selectedDraftId: draftId,
+            selectedDraftType: draftType || "tweet",
+            selectedItemStatus: activeTab,
+          });
+
+          setRefreshCounter((prev) => prev + 1);
+        }
+      }
+      // } else if (activeTab == "scheduled") {
+      //   console.log("Inside scheduled conditional");
+
+      //   if (draftId) {
+      //     let draftType = type;
+      //     if (!draftType) {
+      //       console.log("Determining type for scheduled item");
+      //       const thread = tweetStorage
+      //         .getThreads()
+      //         .find((t) => t.id === draftId);
+      //       if (thread) {
+      //         console.log("Found scheduled thread:", thread);
+      //         draftType = "thread";
+      //       } else {
+      //         const tweet = tweetStorage
+      //           .getTweets()
+      //           .find((t) => t.id === draftId);
+      //         if (tweet) {
+      //           console.log("Found scheduled tweet:", tweet);
+      //           draftType = "tweet";
+      //         }
+      //       }
+      //     }
+
+      //     console.log("Setting editor state for scheduled item:", draftType);
+      //     setEditorState({
+      //       isVisible: true,
+      //       selectedDraftId: draftId,
+      //       selectedDraftType: draftType || "tweet",
+      //       selectedItemStatus: activeTab,
+      //     });
+
+      //     setRefreshCounter((prev) => prev + 1);
+      //   }
+      // }
+
+      console.log("=== showEditor completed ===");
     },
-    []
+    [activeTab]
   );
 
   const hideEditor = useCallback(() => {
@@ -86,7 +237,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     setRefreshCounter((prev) => prev + 1);
   }, []);
 
-  const loadDraft = useCallback(() => {
+  // in Editor.tsx
+  const loadScheduledItem = useCallback(() => {
     if (!editorState.selectedDraftId || !editorState.selectedDraftType) {
       return null;
     }
@@ -95,18 +247,60 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       const tweets = tweetStorage.getTweets();
       return tweets.find((t) => t.id === editorState.selectedDraftId) || null;
     } else {
+      // For threads
       const threads = tweetStorage.getThreads();
       const thread = threads.find((t) => t.id === editorState.selectedDraftId);
 
-      if (thread) {
+      if (thread && thread.status === "scheduled") {
+        // Get all tweets in the thread and ensure they maintain scheduled status
+        const tweets = tweetStorage
+          .getTweets()
+          .filter((t) => t.threadId === thread.id)
+          .sort((a, b) => (a.position || 0) - (b.position || 0))
+          .map((tweet) => ({
+            ...tweet,
+            status: "scheduled" as const,
+            scheduledFor: thread.scheduledFor, // Important: Use thread's scheduledFor
+          }));
+
+        return {
+          ...thread,
+          tweets,
+        } as ThreadWithTweets;
+      }
+      return null;
+    }
+  }, [editorState.selectedDraftId, editorState.selectedDraftType]);
+
+  const loadDraft = useCallback(() => {
+    if (!editorState.selectedDraftId || !editorState.selectedDraftType) {
+      return null;
+    }
+
+    if (editorState.selectedDraftType === "tweet") {
+      const tweets = tweetStorage.getTweets();
+      return (
+        tweets.find(
+          (t) => t.id === editorState.selectedDraftId && t.status === "draft"
+        ) || null
+      );
+    } else {
+      const threads = tweetStorage.getThreads();
+      const thread = threads.find((t) => t.id === editorState.selectedDraftId);
+
+      if (thread && thread.status === "draft") {
         const tweets = tweetStorage
           .getTweets()
           .filter((t) => t.threadId === thread.id)
           .sort((a, b) => (a.position || 0) - (b.position || 0));
 
+        // Important: Preserve the thread's status when loading
         return {
           ...thread,
-          tweets,
+          tweets: tweets.map((t) => ({
+            ...t,
+            status: thread.status,
+          })),
         } as ThreadWithTweets;
       }
       return null;
@@ -126,6 +320,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         showEditor,
         hideEditor,
         loadDraft,
+        loadScheduledItem,
         refreshSidebar,
         refreshCounter,
       }}
