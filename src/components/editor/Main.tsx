@@ -51,65 +51,25 @@ export default function PlayGround({
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
 
   // Initialize editor with proper state
-  // useEffect(() => {
-  //   const initializeEditor = async () => {
-  //     if (draftId) {
-  //       const draft = loadDraft();
-  //       if (draft) {
-  //         if ("tweets" in draft) {
-  //           setIsThread(true);
-  //           setTweets(draft.tweets);
-  //         } else {
-  //           setTweets([draft as Tweet]);
-  //         }
-  //       }
-  //     } else {
-  //       const newTweet: Tweet = {
-  //         id: `tweet-${uuidv4()}`,
-  //         content: "",
-  //         media: [],
-  //         createdAt: new Date(),
-  //         status: "draft",
-  //       };
-  //       setTweets([newTweet]);
-  //       tweetStorage.saveTweet(newTweet, true);
-  //       refreshSidebar();
-  //     }
-  //     setIsLoading(false);
-  //   };
-
-  //   initializeEditor();
-  // }, [draftId, draftType, loadDraft]);
-
-  // Inside the useEffect for initialization
-  // Inside the useEffect for initialization in Main.tsx
-  // Inside the useEffect for initialization
   useEffect(() => {
     const initializeEditor = async () => {
       if (draftId) {
-        // Load appropriate content
-        // based on draft type and status
-        const draft =
-          draftType === "thread"
-            ? activeTab === "scheduled"
-              ? loadScheduledItem()
-              : loadDraft()
-            : activeTab === "scheduled"
-            ? loadScheduledItem()
-            : loadDraft();
+        const isScheduled = editorState.selectedItemStatus === "scheduled";
+        const content = isScheduled ? loadScheduledItem() : loadDraft();
 
-        if (draft) {
-          if ("tweets" in draft) {
+        if (content) {
+          if ("tweets" in content) {
             setIsThread(true);
             setTweets(
-              draft.tweets.map((tweet) => ({
+              content.tweets.map((tweet) => ({
                 ...tweet,
-                status: draft.status,
-                scheduledFor: draft.scheduledFor,
+                status: content.status,
+                scheduledFor: content.scheduledFor,
               }))
             );
+            setThreadId(content.id);
           } else {
-            setTweets([draft as Tweet]);
+            setTweets([content as Tweet]);
           }
         }
       } else {
@@ -165,11 +125,15 @@ export default function PlayGround({
 
       try {
         if (isThread && threadId) {
+          // Get the first tweet to determine status and scheduling
+          const firstTweet = tweets[0];
           const thread: Thread = {
             id: threadId,
             tweetIds: tweets.map((t) => t.id),
             createdAt: new Date(),
-            status: "draft",
+            // Preserve the status and scheduledFor from the tweets
+            status: firstTweet.status,
+            scheduledFor: firstTweet.scheduledFor,
           };
           tweetStorage.saveThread(thread, tweets);
         } else {

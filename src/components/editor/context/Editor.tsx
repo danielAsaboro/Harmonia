@@ -126,6 +126,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Handle draft creation/editing
       if (activeTab == "drafts") {
         console.log("Inside drafts conditional");
 
@@ -153,6 +154,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
           setRefreshCounter((prev) => prev + 1);
         } else {
+          // Load existing draft
           console.log("Has draft id");
 
           let draftType = type;
@@ -162,18 +164,19 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
             const thread = tweetStorage
               .getThreads()
               .find((t) => t.id === draftId);
-            if (thread) {
-              console.log("Found thread:", thread);
-              draftType = "thread";
-            } else {
-              const tweet = tweetStorage
-                .getTweets()
-                .find((t) => t.id === draftId);
-              if (tweet) {
-                console.log("Found tweet:", tweet);
-                draftType = "tweet";
-              }
-            }
+            draftType = thread ? "thread" : "tweet";
+            // if (thread) {
+            //   console.log("Found thread:", thread);
+            //   draftType = "thread";
+            // } else {
+            //   const tweet = tweetStorage
+            //     .getTweets()
+            //     .find((t) => t.id === draftId);
+            //   if (tweet) {
+            //     console.log("Found tweet:", tweet);
+            //     draftType = "tweet";
+            //   }
+            // }
           }
 
           console.log("Setting editor state with type:", draftType);
@@ -187,43 +190,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           setRefreshCounter((prev) => prev + 1);
         }
       }
-      // } else if (activeTab == "scheduled") {
-      //   console.log("Inside scheduled conditional");
-
-      //   if (draftId) {
-      //     let draftType = type;
-      //     if (!draftType) {
-      //       console.log("Determining type for scheduled item");
-      //       const thread = tweetStorage
-      //         .getThreads()
-      //         .find((t) => t.id === draftId);
-      //       if (thread) {
-      //         console.log("Found scheduled thread:", thread);
-      //         draftType = "thread";
-      //       } else {
-      //         const tweet = tweetStorage
-      //           .getTweets()
-      //           .find((t) => t.id === draftId);
-      //         if (tweet) {
-      //           console.log("Found scheduled tweet:", tweet);
-      //           draftType = "tweet";
-      //         }
-      //       }
-      //     }
-
-      //     console.log("Setting editor state for scheduled item:", draftType);
-      //     setEditorState({
-      //       isVisible: true,
-      //       selectedDraftId: draftId,
-      //       selectedDraftType: draftType || "tweet",
-      //       selectedItemStatus: activeTab,
-      //     });
-
-      //     setRefreshCounter((prev) => prev + 1);
-      //   }
-      // }
-
-      console.log("=== showEditor completed ===");
     },
     [activeTab]
   );
@@ -237,7 +203,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     setRefreshCounter((prev) => prev + 1);
   }, []);
 
-  // in Editor.tsx
   const loadScheduledItem = useCallback(() => {
     if (!editorState.selectedDraftId || !editorState.selectedDraftType) {
       return null;
@@ -245,31 +210,35 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
     if (editorState.selectedDraftType === "tweet") {
       const tweets = tweetStorage.getTweets();
-      return tweets.find((t) => t.id === editorState.selectedDraftId) || null;
-    } else {
-      // For threads
-      const threads = tweetStorage.getThreads();
-      const thread = threads.find((t) => t.id === editorState.selectedDraftId);
-
-      if (thread && thread.status === "scheduled") {
-        // Get all tweets in the thread and ensure they maintain scheduled status
-        const tweets = tweetStorage
-          .getTweets()
-          .filter((t) => t.threadId === thread.id)
-          .sort((a, b) => (a.position || 0) - (b.position || 0))
-          .map((tweet) => ({
-            ...tweet,
-            status: "scheduled" as const,
-            scheduledFor: thread.scheduledFor, // Important: Use thread's scheduledFor
-          }));
-
-        return {
-          ...thread,
-          tweets,
-        } as ThreadWithTweets;
-      }
-      return null;
+      return (
+        tweets.find(
+          (t) =>
+            t.id === editorState.selectedDraftId && t.status === "scheduled"
+        ) || null
+      );
     }
+
+    const threads = tweetStorage.getThreads();
+    const thread = threads.find((t) => t.id === editorState.selectedDraftId);
+
+    if (thread && thread.status === "scheduled") {
+      const tweets = tweetStorage
+        .getTweets()
+        .filter((t) => t.threadId === thread.id)
+        .sort((a, b) => (a.position || 0) - (b.position || 0))
+        .map((tweet) => ({
+          ...tweet,
+          status: "scheduled" as const,
+          scheduledFor: thread.scheduledFor,
+        }));
+
+      return {
+        ...thread,
+        tweets,
+      };
+    }
+
+    return null;
   }, [editorState.selectedDraftId, editorState.selectedDraftType]);
 
   const loadDraft = useCallback(() => {
