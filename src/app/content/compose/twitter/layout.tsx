@@ -181,7 +181,7 @@ function EditorSidebar() {
         <section className="h-screen overflow-y-auto">
           {activeTab === "scheduled" && (
             <Link
-              href="/calendar"
+              href="/content/calendar"
               className="group flex justify-between items-center p-4 hover:bg-gray-900 transition-all duration-200 border-b border-gray-800"
             >
               <div className="flex items-center space-x-2">
