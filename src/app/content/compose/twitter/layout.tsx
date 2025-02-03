@@ -6,6 +6,8 @@ import { Tweet, Thread } from "@/types/tweet";
 import { UserAccountProvider } from "@/components/editor/context/account";
 import { SidebarItem } from "@/components/editor/SidebarItem";
 import { tweetStorage } from "@/utils/localStorage";
+import { Calendar } from "lucide-react";
+import Link from "next/link";
 
 function EditorSidebar() {
   const {
@@ -20,7 +22,6 @@ function EditorSidebar() {
   const [items, setItems] = useState<(Tweet | Thread)[]>([]);
   const [currentDraft, setCurrentDraft] = useState<Tweet | null>(null);
 
-  // Update current draft state
   useEffect(() => {
     if (editorState.selectedDraftId) {
       const draft = tweetStorage
@@ -32,7 +33,6 @@ function EditorSidebar() {
     }
   }, [editorState.selectedDraftId, refreshCounter]);
 
-  // Load items whenever storage changes or tab changes
   useEffect(() => {
     const loadItems = () => {
       let filtered: (Tweet | Thread)[] = [];
@@ -68,23 +68,20 @@ function EditorSidebar() {
       );
     };
 
-    // Initial load
     loadItems();
   }, [activeTab, refreshCounter]);
 
   const createNewDraft = () => {
-    // Check if there's already an empty draft in progress
     const emptyDraft = items.find(
       (item) =>
-        !("tweetIds" in item) && // Check it's not a thread
-        !item.content?.trim() && // No content
-        (!item.media || item.media.length === 0) // No media
+        !("tweetIds" in item) &&
+        !item.content?.trim() &&
+        (!item.media || item.media.length === 0)
     );
 
     if (emptyDraft) {
       showEditor(emptyDraft.id, "tweet");
     } else {
-      // Create new draft
       showEditor();
     }
     setIsCreatingNew(false);
@@ -120,7 +117,6 @@ function EditorSidebar() {
               p-4 cursor-pointer hover:bg-gray-900
               transition-all duration-200 border-b border-gray-800
             `}
-            // onClick={createNewDraft}
             onClick={() => {
               if (
                 currentDraft &&
@@ -129,7 +125,7 @@ function EditorSidebar() {
                 (!currentDraft.media || currentDraft.media.length === 0)
               ) {
                 showEditor(currentDraft?.id, "tweet");
-                return; // Don't create new if current is empty
+                return;
               }
               createNewDraft();
             }}
@@ -183,9 +179,23 @@ function EditorSidebar() {
           </section>
         )}
         <section className="h-screen overflow-y-auto">
+          {activeTab === "scheduled" && (
+            <Link
+              href="/calendar"
+              className="group flex justify-between items-center p-4 hover:bg-gray-900 transition-all duration-200 border-b border-gray-800"
+            >
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-gray-400" />
+                <span className="text-gray-300">View Calendar</span>
+              </div>
+              <span className="text-gray-500 group-hover:translate-x-1 transition-transform duration-200">
+                →
+              </span>
+            </Link>
+          )}
           {items.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              No {activeTab == "drafts" ? activeTab : `${activeTab} post`}{" "}
+              No {activeTab === "drafts" ? activeTab : `${activeTab} post`}{" "}
               available
             </div>
           ) : (
@@ -199,7 +209,6 @@ function EditorSidebar() {
                   if (editorState.selectedDraftId === id) {
                     hideEditor();
                   }
-                  // Force re-render of the list
                   setItems((prevItems) =>
                     prevItems.filter((item) => item.id !== id)
                   );

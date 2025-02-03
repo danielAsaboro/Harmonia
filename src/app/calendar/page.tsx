@@ -1,74 +1,140 @@
 // /app/calendar/page.tsx
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CalendarView from "@/components/calendar/CalendarView";
-import { CalendarEvent } from "@/components/calendar/types";
+import { CalendarEvent, CalendarEventType } from "@/components/calendar/types";
+import { tweetStorage } from "@/utils/localStorage";
 
 export default function CalendarPage() {
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    {
-      id: "1",
-      title: "Community Meeting",
-      start: new Date(2024, 1, 5, 10, 0), // Feb 5, 2024, 10:00
-      end: new Date(2024, 1, 5, 11, 0),
-      type: "community",
-      tags: ["planning", "team"],
-      isDeletable: true, // Mark some events as deletable
-    },
-    {
-      id: "2",
-      title: "Educational Workshop",
-      start: new Date(2024, 1, 6, 14, 0), // Feb 6, 2024, 14:00
-      end: new Date(2024, 1, 6, 16, 0),
-      type: "educational",
-      tags: ["solana", "development"],
-      isDeletable: true, // Mark some events as deletable
-    },
-    {
-      id: "3",
-      title: "Meme Contest",
-      start: new Date(2024, 1, 7, 12, 0), // Feb 7, 2024, 12:00
-      end: new Date(2024, 1, 7, 13, 0),
-      type: "meme",
-      tags: ["fun", "engagement"],
-      isDeletable: true, // Mark some events as deletable
-    },
-  ]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+  useEffect(() => {
+    const loadScheduledContent = () => {
+      // Get standalone scheduled tweets (those without threadId)
+      const tweets = tweetStorage
+        .getTweets()
+        .filter((t) => t.status === "scheduled" && !t.threadId);
+
+      // Get threads and their first tweets
+      const threads = tweetStorage
+        .getThreads()
+        .filter((t) => t.status === "scheduled");
+      const threadFirstTweets: CalendarEvent[] = threads.map((thread) => {
+        const firstTweet = tweetStorage.getThreadPreview(thread.id);
+        return {
+          id: thread.id,
+          title: firstTweet
+            ? `Thread: ${firstTweet.content.slice(0, 40)}...`
+            : `Thread (${thread.tweetIds.length} tweets)`,
+          start: new Date(thread.scheduledFor!),
+          end: new Date(thread.scheduledFor!),
+          type: "community" as CalendarEventType,
+          isDeletable: true,
+        };
+      });
+
+      // Convert standalone tweets to calendar events
+      const tweetEvents: CalendarEvent[] = tweets.map((tweet) => ({
+        id: tweet.id,
+        title:
+          tweet.content.slice(0, 50) + (tweet.content.length > 50 ? "..." : ""),
+        start: new Date(tweet.scheduledFor!),
+        end: new Date(tweet.scheduledFor!),
+        type: "community" as CalendarEventType,
+        isDeletable: true,
+      }));
+
+      // Combine standalone tweets and thread first tweets
+      setEvents([...tweetEvents, ...threadFirstTweets]);
+    };
+
+    loadScheduledContent();
+    const intervalId = setInterval(loadScheduledContent, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleEventCreate = (eventData: Partial<CalendarEvent>) => {
     const newEvent: CalendarEvent = {
-      id: Math.random().toString(),
+      id: `event-${Date.now()}`,
       title: eventData.title || "Untitled",
       start: eventData.start || new Date(),
       end: eventData.end || new Date(),
-      type: eventData.type || "community",
-      tags: eventData.tags || [],
-      isDeletable: true, // New events are deletable
+      type: (eventData.type || "community") as CalendarEventType,
+      isDeletable: true,
     };
     setEvents((prev) => [...prev, newEvent]);
   };
 
   const handleEventUpdate = (updatedEvent: CalendarEvent) => {
-    setEvents((prev) =>
-      prev.map((event) => (event.id === updatedEvent.id ? updatedEvent : event))
-    );
+    setEvents((prev) => {
+      const newEvents = prev.map((event) => {
+        if (event.id === updatedEvent.id) {
+          // Check if this is a scheduled tweet/thread by ID lookup
+          const tweet = tweetStorage.getTweets().find((t) => t.id === event.id);
+          const thread = tweetStorage
+            .getThreads()
+            .find((t) => t.id === event.id);
+
+          if (tweet) {
+            const updatedTweet = {
+              ...tweet,
+              scheduledFor: updatedEvent.start,
+            };
+            tweetStorage.saveTweet(updatedTweet, true);
+          } else if (thread) {
+            const updatedThread = {
+              ...thread,
+              scheduledFor: updatedEvent.start,
+            };
+            tweetStorage.saveThread(updatedThread, [], true);
+          }
+          return updatedEvent;
+        }
+        return event;
+      });
+      return newEvents;
+    });
   };
 
-    const handleEventDrop = (event: CalendarEvent, start: Date, end: Date) => {
+  const handleEventDrop = (event: CalendarEvent, start: Date, end: Date) => {
     const updatedEvent = {
       ...event,
       start,
-      end,
+      end: start, // For tweets/threads, end time is same as start
     };
     handleEventUpdate(updatedEvent);
   };
 
   const handleEventDelete = (eventToDelete: CalendarEvent) => {
     setEvents((prev) => prev.filter((event) => event.id !== eventToDelete.id));
+
+    // Check if this is a scheduled tweet/thread by ID lookup
+    const tweet = tweetStorage
+      .getTweets()
+      .find((t) => t.id === eventToDelete.id);
+    const thread = tweetStorage
+      .getThreads()
+      .find((t) => t.id === eventToDelete.id);
+
+    if (tweet) {
+      const updatedTweet = {
+        ...tweet,
+        status: "draft" as const,
+        scheduledFor: undefined,
+      };
+      tweetStorage.saveTweet(updatedTweet, true);
+    } else if (thread) {
+      const updatedThread = {
+        ...thread,
+        status: "draft" as const,
+        scheduledFor: undefined,
+      };
+      tweetStorage.saveThread(updatedThread, [], true);
+    }
   };
 
   return (
-    <div className="h-screen bg-white">
+    <div className="h-screen bg-gray-900 text-gray-100">
       <CalendarView
         events={events}
         onEventCreate={handleEventCreate}

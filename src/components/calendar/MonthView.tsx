@@ -1,5 +1,5 @@
 // /components/calendar/MonthView.tsx
-import React, { useCallback, useState, memo } from "react";
+import React, { memo, useCallback, useState, useEffect } from "react";
 import {
   format,
   startOfMonth,
@@ -8,13 +8,15 @@ import {
   isSameMonth,
   isToday,
   isSameDay,
+  startOfWeek,
+  endOfWeek,
 } from "date-fns";
-import { CalendarEvent, DragPosition } from "./types";
+import { CalendarEvent, CalendarEventType, DragPosition } from "./types";
 import { Card } from "../ui/card";
 import { cn } from "@/utils/ts-merge";
 import { useMousePosition } from "./hooks/useMousePosition";
 
-type Week = Date[];
+const MAX_VISIBLE_EVENTS = 3;
 
 interface MonthViewProps {
   events: CalendarEvent[];
@@ -25,34 +27,112 @@ interface MonthViewProps {
   timezone: string;
 }
 
-interface DragPreviewProps {
-  event: CalendarEvent;
-  position: DragPosition;
+const EVENT_TYPE_STYLES: Record<CalendarEventType | "default", string> = {
+  default: "bg-blue-900/50 border-blue-700 hover:bg-blue-800/50",
+  community: "bg-green-900/50 border-green-700 hover:bg-green-800/50",
+  educational: "bg-purple-900/50 border-purple-700 hover:bg-purple-800/50",
+  meme: "bg-pink-900/50 border-pink-700 hover:bg-pink-800/50",
+  challenge: "bg-orange-900/50 border-orange-700 hover:bg-orange-800/50",
+  tweet: "bg-blue-900/50 border-blue-700 hover:bg-blue-800/50",
+  thread: "bg-indigo-900/50 border-indigo-700 hover:bg-indigo-800/50",
+};
+
+interface StackedEventsProps {
+  events: CalendarEvent[];
+  onEventClick: (event: CalendarEvent) => void;
+  onDragStart: (event: CalendarEvent, e: React.DragEvent) => void;
+  onDragEnd: () => void;
 }
 
-// Memoized drag preview component
-const DragPreview = memo(({ event, position }: DragPreviewProps) => (
-  <div
-    className="fixed pointer-events-none z-50 opacity-70"
-    style={{
-      left: position.x + 10,
-      top: position.y + 10,
-      width: "200px",
-    }}
-  >
-    <Card
-      className={cn(
-        "p-2",
-        event.type === "community" && "bg-green-50 border-green-200",
-        event.type === "educational" && "bg-purple-50 border-purple-200",
-        event.type === "meme" && "bg-pink-50 border-pink-200",
-        event.type === "challenge" && "bg-orange-50 border-orange-200"
+const StackedEvents: React.FC<StackedEventsProps> = ({
+  events,
+  onEventClick,
+  onDragStart,
+  onDragEnd,
+}) => {
+  const [showAll, setShowAll] = useState(false);
+  const visibleEvents = showAll ? events : events.slice(0, MAX_VISIBLE_EVENTS);
+  const hiddenCount = events.length - MAX_VISIBLE_EVENTS;
+
+  return (
+    <div className="absolute inset-x-1 inset-y-0.5">
+      {visibleEvents.map((event, index) => (
+        <Card
+          key={event.id}
+          draggable
+          onDragStart={(e) => onDragStart(event, e)}
+          onDragEnd={onDragEnd}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEventClick(event);
+          }}
+          className={cn(
+            "absolute inset-x-0 cursor-move p-1.5 transition-all duration-150",
+            "hover:z-50 hover:scale-105 border border-opacity-50",
+            "text-gray-100",
+            event.isEmptySlot
+              ? "border-dashed border-gray-700 bg-gray-800/50"
+              : EVENT_TYPE_STYLES[event.type] || EVENT_TYPE_STYLES.default
+          )}
+          style={{
+            height: "calc(100% - 4px)",
+            transform: `translateY(${index * 4}px)`,
+            zIndex: index,
+          }}
+        >
+          <div className="text-xs font-medium truncate">{event.title}</div>
+          {event.tags && event.tags.length > 0 && (
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {event.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-1 text-[10px] rounded bg-black/20 text-gray-200"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </Card>
+      ))}
+      {!showAll && hiddenCount > 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowAll(true);
+          }}
+          className="absolute bottom-0 right-0 text-xs bg-gray-800 px-2 py-0.5 rounded
+                     text-blue-400 hover:text-blue-300 font-medium transition-colors
+                     border border-gray-700 hover:bg-gray-700"
+        >
+          +{hiddenCount} more
+        </button>
       )}
+    </div>
+  );
+};
+
+const DragPreview = memo(
+  ({ event, position }: { event: CalendarEvent; position: DragPosition }) => (
+    <div
+      className="fixed pointer-events-none z-50 opacity-70"
+      style={{
+        left: position.x + 10,
+        top: position.y + 10,
+        width: "200px",
+      }}
     >
-      <div className="text-sm font-medium truncate">{event.title}</div>
-    </Card>
-  </div>
-));
+      <Card
+        className={cn(
+          "p-2 border border-opacity-50 text-gray-100",
+          EVENT_TYPE_STYLES[event.type] || EVENT_TYPE_STYLES.default
+        )}
+      >
+        <div className="text-sm font-medium truncate">{event.title}</div>
+      </Card>
+    </div>
+  )
+);
 
 DragPreview.displayName = "DragPreview";
 
@@ -66,15 +146,29 @@ export default function MonthView({
   const [draggingEvent, setDraggingEvent] = useState<CalendarEvent | null>(
     null
   );
-  const [dragTargetDate, setDragTargetDate] = useState<Date | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const mousePosition = useMousePosition();
 
+  // Calculate month start and end, including days from previous/next months
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const calendarStart = startOfWeek(monthStart);
+  const calendarEnd = endOfWeek(monthEnd);
 
-  // Get events for a specific day
+  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        setDraggingEvent(null);
+      }
+    };
+
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [isDragging]);
+
   const getEventsForDay = useCallback(
     (date: Date) => {
       return events.filter((event) => isSameDay(new Date(event.start), date));
@@ -82,47 +176,14 @@ export default function MonthView({
     [events]
   );
 
-  // Calculate grid position for day
-  const getDayPosition = (date: Date) => {
-    const firstDayOfMonth = startOfMonth(date);
-    const dayOfWeek = firstDayOfMonth.getDay();
-    const dayOfMonth = date.getDate();
-    const weekNumber = Math.floor((dayOfMonth + dayOfWeek - 1) / 7);
-    return { weekNumber, dayOfWeek };
-  };
-
-  // Generate grid of weeks
-  const weeks: Week[] = [];
-  let currentWeek: Week = [];
-  let currentWeekNumber = 0;
-
-  days.forEach((day) => {
-    const { weekNumber } = getDayPosition(day);
-    if (weekNumber !== currentWeekNumber) {
-      weeks.push(currentWeek);
-      currentWeek = [];
-      currentWeekNumber = weekNumber;
-    }
-    currentWeek.push(day);
-  });
-  if (currentWeek.length > 0) {
-    weeks.push(currentWeek);
-  }
-
   const handleDragStart = (event: CalendarEvent, e: React.DragEvent) => {
     setDraggingEvent(event);
     setIsDragging(true);
 
-    // Create custom drag preview
     const dragImage = new Image();
     dragImage.src =
       "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     e.dataTransfer.setDragImage(dragImage, 0, 0);
-  };
-
-  const handleDragOver = (date: Date, e: React.DragEvent) => {
-    e.preventDefault();
-    setDragTargetDate(date);
   };
 
   const handleDrop = (targetDate: Date) => {
@@ -138,109 +199,71 @@ export default function MonthView({
 
       onEventDrop(draggingEvent, newStart, newEnd);
       setDraggingEvent(null);
-      setDragTargetDate(null);
       setIsDragging(false);
     }
   };
 
   const handleDragEnd = () => {
     setDraggingEvent(null);
-    setDragTargetDate(null);
     setIsDragging(false);
   };
 
   return (
-    <div className="flex-1 grid grid-cols-7 grid-rows-6 border-t border-l">
+    <div className="flex-1 grid grid-cols-7 grid-rows-6 bg-gray-900 border-t border-l border-gray-800/50">
       {/* Day headers */}
       {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-        <div key={day} className="p-2 text-sm font-medium border-b border-r">
+        <div
+          key={day}
+          className="p-2 text-sm font-medium border-b border-r border-gray-800/50 text-gray-300"
+        >
           {day}
         </div>
       ))}
 
       {/* Calendar grid */}
-      {weeks.map((week, weekIndex) => (
-        <React.Fragment key={weekIndex}>
-          {week.map((day, dayIndex) => {
-            const dayEvents = getEventsForDay(day);
-            const isCurrentMonth = isSameMonth(day, currentDate);
-            const isDropTarget =
-              dragTargetDate && isSameDay(day, dragTargetDate);
+      {days.map((day, index) => {
+        const dayEvents = getEventsForDay(day);
+        const isCurrentMonth = isSameMonth(day, currentDate);
+        const isCurrentDay = isToday(day);
 
-            return (
-              <div
-                key={day.toISOString()}
+        return (
+          <div
+            key={index}
+            onClick={() => onSlotClick(day)}
+            className={cn(
+              "min-h-[120px] p-2 border-b border-r border-gray-800/50 relative transition-colors duration-150",
+              !isCurrentMonth && "bg-gray-900/50",
+              isCurrentDay && "bg-blue-900/20",
+              "hover:bg-gray-800/20"
+            )}
+          >
+            <div className="flex justify-between items-start">
+              <span
                 className={cn(
-                  "min-h-[120px] p-2 border-b border-r relative transition-colors duration-150",
-                  !isCurrentMonth && "bg-gray-50",
-                  isToday(day) && "bg-blue-50/20",
-                  isDropTarget && "bg-blue-50"
+                  "text-sm font-medium",
+                  !isCurrentMonth ? "text-gray-500" : "text-gray-300",
+                  isCurrentDay && "text-blue-400"
                 )}
-                onClick={() => onSlotClick(day)}
-                onDragOver={(e) => handleDragOver(day, e)}
-                onDrop={() => handleDrop(day)}
               >
-                <div className="flex justify-between items-start">
-                  <span
-                    className={cn(
-                      "text-sm font-medium",
-                      !isCurrentMonth && "text-gray-400"
-                    )}
-                  >
-                    {format(day, "d")}
-                  </span>
-                </div>
+                {format(day, "d")}
+              </span>
+            </div>
 
-                <div className="mt-2 space-y-1">
-                  {dayEvents.map((event) => (
-                    <Card
-                      key={event.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(event, e)}
-                      onDragEnd={handleDragEnd}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEventClick(event);
-                      }}
-                      className={cn(
-                        "p-1 cursor-move text-xs transition-transform duration-150 hover:scale-[1.02]",
-                        event.isEmptySlot
-                          ? "border-dashed bg-gray-50"
-                          : "bg-blue-50 border-blue-200",
-                        event.type === "community" &&
-                          "bg-green-50 border-green-200",
-                        event.type === "educational" &&
-                          "bg-purple-50 border-purple-200",
-                        event.type === "meme" && "bg-pink-50 border-pink-200",
-                        event.type === "challenge" &&
-                          "bg-orange-50 border-orange-200"
-                      )}
-                    >
-                      <div className="font-medium truncate">
-                        {format(new Date(event.start), "HH:mm")} - {event.title}
-                      </div>
-                      {event.tags && event.tags.length > 0 && (
-                        <div className="flex gap-1 mt-1 flex-wrap">
-                          {event.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1 text-[10px] rounded bg-white/50"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </React.Fragment>
-      ))}
+            <div className="mt-2 space-y-1 relative">
+              {dayEvents.length > 0 && (
+                <StackedEvents
+                  events={dayEvents}
+                  onEventClick={onEventClick}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                />
+              )}
+            </div>
+          </div>
+        );
+      })}
 
-      {/* Drag Preview */}
+      {/* Drag preview */}
       {isDragging && draggingEvent && (
         <DragPreview event={draggingEvent} position={mousePosition} />
       )}

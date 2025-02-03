@@ -1,10 +1,13 @@
 // /components/calendar/CalendarView.tsx
 import { useState } from "react";
+import Link from "next/link";
 import {
   Settings,
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  Globe,
+  ArrowLeft,
 } from "lucide-react";
 import { CalendarEvent, CalendarViewProps, CalendarViewType } from "./types";
 import {
@@ -53,6 +56,7 @@ export default function CalendarView({
   const handleViewChange = (newView: CalendarViewType) => {
     setViewType(newView);
   };
+
   const handleEventClick = (event: CalendarEvent) => {
     setSelectedEvent(event);
     setSelectedDate(undefined);
@@ -75,7 +79,6 @@ export default function CalendarView({
   };
 
   const handleDeleteEvent = () => {
-    // Check if delete handler exists and event is selected
     if (onEventDelete && selectedEvent) {
       onEventDelete(selectedEvent);
     }
@@ -106,34 +109,63 @@ export default function CalendarView({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gray-900 text-gray-100">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold">
-              {viewType === "week"
-                ? `${format(startOfWeek(currentDate), "MMM d")} - ${format(
-                    endOfWeek(currentDate),
-                    "MMM d, yyyy"
-                  )}`
-                : format(currentDate, "MMMM yyyy")}
-            </h1>
-            <div className="text-sm text-gray-500">Timezone: {timezone}</div>
+      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        {/* Back to Editor Link */}
+        <Link
+          href="/content/compose/twitter"
+          className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors group"
+        >
+          <ArrowLeft className="w-5 h-5 group-hover:translate-x-[-2px] transition-transform" />
+          <span className="text-sm font-medium">Back to Editor</span>
+        </Link>
+
+        {/* Date and Timezone Info */}
+        <div className="flex flex-col items-center">
+          <h1 className="text-xl font-semibold text-white">
+            {viewType === "week"
+              ? `${format(startOfWeek(currentDate), "MMM d")} - ${format(
+                  endOfWeek(currentDate),
+                  "MMM d, yyyy"
+                )}`
+              : format(currentDate, "MMMM yyyy")}
+          </h1>
+          <div className="flex items-start gap-1 text-xs text-gray-400 mt-1">
+            <Globe className="w-3.5 h-3.5 mr-1" />
+            <span>{timezone}</span>
           </div>
         </div>
 
         {/* Navigation Controls */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleToday}>
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={handleToday}
+            className="
+              rounded-full 
+              bg-slate-800 
+              text-gray-300 
+              hover:bg-slate-700 
+              hover:text-white 
+              transition-all 
+              px-4 
+              py-2 
+              text-sm 
+              font-medium
+              border 
+              border-slate-700
+              shadow-sm
+              hover:shadow-md
+            "
+          >
             Today
           </Button>
 
-          <div className="flex items-center rounded-lg border border-gray-200">
+          <div className="flex items-center rounded-lg border border-gray-700">
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-r-none"
+              className="rounded-r-none hover:bg-gray-800"
               onClick={handlePrevious}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -141,7 +173,7 @@ export default function CalendarView({
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-l-none"
+              className="rounded-l-none hover:bg-gray-800"
               onClick={handleNext}
             >
               <ChevronRight className="h-4 w-4" />
@@ -150,33 +182,35 @@ export default function CalendarView({
         </div>
 
         {/* View Switcher */}
-        <div className="flex rounded-lg border">
-          <button
-            onClick={() => handleViewChange("week")}
-            className={`px-3 py-1.5 text-sm ${
-              viewType === "week" ? "bg-primary text-white" : ""
-            }`}
-          >
-            Week
-          </button>
-          <button
-            onClick={() => handleViewChange("month")}
-            className={`px-3 py-1.5 text-sm ${
-              viewType === "month" ? "bg-primary text-white" : ""
-            }`}
-          >
-            Month
-          </button>
+        <div className="flex rounded-lg border border-gray-700 overflow-hidden">
+          {(["week", "month"] as const).map((view) => (
+            <button
+              key={view}
+              onClick={() => handleViewChange(view)}
+              className={`
+                px-4 py-2 text-sm font-medium transition-colors 
+                ${
+                  viewType === view
+                    ? "bg-green-500 text-white"
+                    : "text-gray-300 hover:bg-gray-800"
+                }
+              `}
+            >
+              {view.charAt(0).toUpperCase() + view.slice(1)}
+            </button>
+          ))}
         </div>
 
-        <button className="p-2 hover:bg-gray-100 rounded-full">
-          <Settings className="w-5 h-5" />
+        <button
+          className="p-2 rounded-full hover:bg-gray-800 transition-colors"
+          aria-label="Calendar Settings"
+        >
+          <Settings className="w-5 h-5 text-gray-400 hover:text-white" />
         </button>
       </div>
 
-      {/* Calendar Grid - To be implemented */}
+      {/* Calendar Grid */}
       <div className="flex-1 overflow-auto">
-        {/* Week/Month view components will go here */}
         {viewType === "week" ? (
           <WeekView
             events={events}

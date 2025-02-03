@@ -48,7 +48,9 @@ export type CalendarEventType =
   | "community"
   | "educational"
   | "meme"
-  | "challenge";
+  | "challenge"
+  | "tweet"
+  | "thread";
 
 export interface CalendarEvent {
   id: string;
