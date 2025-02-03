@@ -117,7 +117,6 @@ export function SidebarItem({
                 onClick={(e) => {
                   e.stopPropagation();
                   // Share functionality will be implemented here
-                  console.log("Share clicked for:", item.id);
                 }}
                 className="w-full px-4 py-2 text-sm text-left text-gray-300 hover:bg-gray-800 flex items-center gap-2"
               >

@@ -1,6 +1,12 @@
 // components/Editor/Editor.tsx
 "use client";
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { v4 as uuidv4 } from "uuid";
 import { tweetStorage } from "@/utils/localStorage";
@@ -47,11 +53,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   const showEditor = useCallback(
     (draftId?: string, type?: "tweet" | "thread") => {
-      console.log("=== showEditor called ===");
-      console.log("Current active tab:", activeTab);
-      console.log("Received draftId:", draftId);
-      console.log("Received type:", type);
-
       if (activeTab === "scheduled") {
         // For scheduled items, just show the preview
         if (draftId) {
@@ -67,8 +68,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
       // Handle draft creation/editing
       if (activeTab == "drafts") {
-        console.log("Inside drafts conditional");
-
         if (!draftId) {
           console.log("No draft id - creating new tweet");
           const newId = `tweet-${uuidv4()}`;
@@ -81,7 +80,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           };
 
           tweetStorage.saveTweet(newTweet, true);
-          console.log("Created new tweet:", newTweet);
 
           setEditorState({
             isVisible: true,
@@ -89,24 +87,19 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
             selectedDraftType: "tweet",
             selectedItemStatus: activeTab,
           });
-          console.log("Set editor state for new tweet");
 
           setRefreshCounter((prev) => prev + 1);
         } else {
           // Load existing draft
-          console.log("Has draft id");
 
           let draftType = type;
           if (!draftType) {
-            console.log("Determining type from storage");
-
             const thread = tweetStorage
               .getThreads()
               .find((t) => t.id === draftId);
             draftType = thread ? "thread" : "tweet";
           }
 
-          console.log("Setting editor state with type:", draftType);
           setEditorState({
             isVisible: true,
             selectedDraftId: draftId,
