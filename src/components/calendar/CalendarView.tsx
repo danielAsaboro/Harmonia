@@ -20,6 +20,7 @@ import WeekView from "./WeekView";
 import MonthView from "./MonthView";
 import EventModal from "./EventModal";
 import { Button } from "../ui/button";
+import ConfirmDialog from "../editor/ConfirmDialog";
 
 interface Props
   extends Omit<
@@ -35,12 +36,15 @@ export default function CalendarView({
   onEventDrop,
   onEventCreate,
   onEventUpdate,
+  onEventDelete,
   initialViewType = "week",
   timezone = "UTC",
 }: Props) {
   const [viewType, setViewType] = useState<CalendarViewType>(initialViewType);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const [selectedEvent, setSelectedEvent] = useState<
     CalendarEvent | undefined
   >();
@@ -67,6 +71,15 @@ export default function CalendarView({
     } else {
       onEventCreate(eventData);
     }
+    setShowEventModal(false);
+  };
+
+  const handleDeleteEvent = () => {
+    // Check if delete handler exists and event is selected
+    if (onEventDelete && selectedEvent) {
+      onEventDelete(selectedEvent);
+    }
+    setShowDeleteConfirm(false);
     setShowEventModal(false);
   };
 
@@ -191,8 +204,20 @@ export default function CalendarView({
             setSelectedDate(undefined);
           }}
           onSave={handleSaveEvent}
+          onDelete={onEventDelete ? handleDeleteEvent : undefined}
           event={selectedEvent}
           defaultDate={selectedDate}
+        />
+
+        {/* Deletion Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDeleteEvent}
+          title="Delete Event"
+          message="Are you sure you want to delete this event? This action cannot be undone."
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
         />
       </div>
     </div>

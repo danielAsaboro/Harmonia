@@ -1,4 +1,4 @@
-import { Tweet, Thread, ValidationResult } from "../types/tweet";
+import { Tweet, Thread,  } from "../types/tweet";
 
 const MAX_TWEET_LENGTH = 280;
 
@@ -6,22 +6,22 @@ export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 };
 
-export const validateTweet = (content: string): ValidationResult => {
-  const errors: string[] = [];
+// export const validateTweet = (content: string): ValidationResult => {
+//   const errors: string[] = [];
 
-  if (!content) {
-    errors.push("Tweet content cannot be empty");
-  }
+//   if (!content) {
+//     errors.push("Tweet content cannot be empty");
+//   }
 
-  if (content.length > MAX_TWEET_LENGTH) {
-    errors.push(`Tweet exceeds ${MAX_TWEET_LENGTH} characters`);
-  }
+//   if (content.length > MAX_TWEET_LENGTH) {
+//     errors.push(`Tweet exceeds ${MAX_TWEET_LENGTH} characters`);
+//   }
 
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-};
+//   return {
+//     isValid: errors.length === 0,
+//     errors,
+//   };
+// };
 
 export const createNewTweet = (
   content: string,

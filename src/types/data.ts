@@ -1,4 +1,4 @@
-import { Tweet, Thread, TweetStatus, ComposerState } from "./tweet";
+import { Tweet, Thread, TweetStatus } from "./tweet";
 
 // Helper function to create dates
 const createDate = (daysOffset: number = 0) => {
@@ -126,8 +126,7 @@ export const testThreads: Thread[] = [
   },
 ];
 
-// Combined posts for testing
-// export const allPosts: (Tweet | Thread)[] = [...testTweets, ...testThreads];
+
 
 // Sample validation results
 export const sampleValidationResults = {
@@ -140,19 +139,3 @@ export const sampleValidationResults = {
     errors: ["Content exceeds maximum length", "Media file type not supported"],
   },
 } as const;
-
-// Sample composer states
-export const sampleComposerStates: ComposerState[] = [
-  {
-    currentTweet: testTweets[0],
-    currentThread: {},
-    isThreadMode: false,
-    isDirty: false,
-  },
-  {
-    currentTweet: {},
-    currentThread: testThreads[0],
-    isThreadMode: true,
-    isDirty: true,
-  },
-];

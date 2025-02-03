@@ -13,6 +13,7 @@ export default function CalendarPage() {
       end: new Date(2024, 1, 5, 11, 0),
       type: "community",
       tags: ["planning", "team"],
+      isDeletable: true, // Mark some events as deletable
     },
     {
       id: "2",
@@ -21,6 +22,7 @@ export default function CalendarPage() {
       end: new Date(2024, 1, 6, 16, 0),
       type: "educational",
       tags: ["solana", "development"],
+      isDeletable: true, // Mark some events as deletable
     },
     {
       id: "3",
@@ -29,6 +31,7 @@ export default function CalendarPage() {
       end: new Date(2024, 1, 7, 13, 0),
       type: "meme",
       tags: ["fun", "engagement"],
+      isDeletable: true, // Mark some events as deletable
     },
   ]);
 
@@ -40,6 +43,7 @@ export default function CalendarPage() {
       end: eventData.end || new Date(),
       type: eventData.type || "community",
       tags: eventData.tags || [],
+      isDeletable: true, // New events are deletable
     };
     setEvents((prev) => [...prev, newEvent]);
   };
@@ -50,13 +54,17 @@ export default function CalendarPage() {
     );
   };
 
-  const handleEventDrop = (event: CalendarEvent, start: Date, end: Date) => {
+    const handleEventDrop = (event: CalendarEvent, start: Date, end: Date) => {
     const updatedEvent = {
       ...event,
       start,
       end,
     };
     handleEventUpdate(updatedEvent);
+  };
+
+  const handleEventDelete = (eventToDelete: CalendarEvent) => {
+    setEvents((prev) => prev.filter((event) => event.id !== eventToDelete.id));
   };
 
   return (
@@ -66,6 +74,7 @@ export default function CalendarPage() {
         onEventCreate={handleEventCreate}
         onEventUpdate={handleEventUpdate}
         onEventDrop={handleEventDrop}
+        onEventDelete={handleEventDelete}
       />
     </div>
   );

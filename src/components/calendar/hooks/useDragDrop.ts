@@ -1,17 +1,44 @@
 // /components/calendar/hooks/useDragDrop.ts
-import { useState, useCallback } from "react";
-import { CalendarEvent, DraggedEventMetadata, DragState } from "../types";
+import { useState, useCallback, useEffect } from "react";
+import {
+  CalendarEvent,
+  DraggedEventMetadata,
+  DragState,
+  DragTarget,
+} from "../types";
 import { differenceInMinutes, addMinutes, isSameDay } from "date-fns";
+import { useMousePosition } from "./useMousePosition";
 
-export const useDragDrop = (
-  onEventDrop: (event: CalendarEvent, start: Date, end: Date) => void
-) => {
+interface UseDragDropProps {
+  onEventDrop: (event: CalendarEvent, start: Date, end: Date) => void;
+}
+export const useDragDrop = ({ onEventDrop }: UseDragDropProps) => {
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     draggedEvent: null,
     dragSource: null,
     dropTarget: null,
   });
+  const [draggingEvent, setDraggingEvent] = useState<CalendarEvent | null>(
+    null
+  );
+  const [dragTarget, setDragTarget] = useState<DragTarget | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const mousePosition = useMousePosition();
+
+  // Cleanup drag state when mouse is released
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        setDraggingEvent(null);
+        setDragTarget(null);
+      }
+    };
+
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [isDragging]);
 
   const handleDragStart = useCallback(
     (
@@ -126,5 +153,9 @@ export const useDragDrop = (
     handleDragOver,
     handleDrop,
     handleDragEnd,
+    draggingEvent,
+    dragTarget,
+    isDragging,
+    mousePosition,
   };
 };

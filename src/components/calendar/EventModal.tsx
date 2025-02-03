@@ -1,6 +1,6 @@
 // /components/calendar/EventModal.tsx
 import React from "react";
-import { X, Clock, Tag, Calendar } from "lucide-react";
+import { X, Clock, Tag, Calendar, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Card, CardHeader, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
@@ -11,6 +11,7 @@ interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: Partial<CalendarEvent>) => void;
+  onDelete?: (event: CalendarEvent) => void;
   event?: CalendarEvent;
   defaultDate?: Date;
 }
@@ -19,6 +20,7 @@ export default function EventModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   event,
   defaultDate,
 }: EventModalProps) {
@@ -38,6 +40,13 @@ export default function EventModal({
     e.preventDefault();
     onSave(formData);
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (onDelete && event) {
+      onDelete(event);
+      onClose();
+    }
   };
 
   const handleAddTag = () => {
@@ -70,9 +79,16 @@ export default function EventModal({
           <h2 className="text-xl font-semibold">
             {event ? "Edit Event" : "Create Event"}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {event && onDelete && (
+              <Button variant="destructive" size="icon" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent>

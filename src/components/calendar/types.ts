@@ -7,9 +7,10 @@ export interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  type: "community" | "educational" | "meme" | "challenge";
+  type: CalendarEventType;
   tags?: string[];
   isEmptySlot?: boolean;
+  isDeletable?: boolean;
 }
 
 export interface CalendarViewProps {
@@ -19,6 +20,7 @@ export interface CalendarViewProps {
   onSlotClick: (start: Date) => void;
   onEventCreate: (event: Partial<CalendarEvent>) => void;
   onEventUpdate: (event: CalendarEvent) => void;
+  onEventDelete?: (event: CalendarEvent) => void;
   viewType: CalendarViewType;
   timezone: string;
 }
