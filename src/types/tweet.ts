@@ -11,6 +11,7 @@ export interface Tweet {
   scheduledFor?: Date;
   threadId?: string;
   position?: number;
+  lastSaved?: string;
 }
 
 export interface Thread {

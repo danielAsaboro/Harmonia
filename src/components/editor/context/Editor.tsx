@@ -1,6 +1,6 @@
 // components/Editor/Editor.tsx
 "use client";
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { v4 as uuidv4 } from "uuid";
 import { tweetStorage } from "@/utils/localStorage";
@@ -37,74 +37,13 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     selectedDraftType: null,
   });
 
-  // const showEditor = useCallback(
-  //   (draftId?: string, type?: "tweet" | "thread") => {
-  //     console.log("active tab:", activeTab);
-  //     console.log("draft id: ", draftId);
-  //     if (activeTab == "drafts") {
-  //       console.log("inside draft conditional");
-
-  //       if (!draftId) {
-  //         console.log("No draft id");
-  //         const newId = `tweet-${uuidv4()}`;
-  //         const newTweet: Tweet = {
-  //           id: newId,
-  //           content: "",
-  //           media: [],
-  //           createdAt: new Date(),
-  //           status: "draft",
-  //         };
-
-  //         tweetStorage.saveTweet(newTweet, true);
-
-  //         setEditorState({
-  //           isVisible: true,
-  //           selectedDraftId: newId,
-  //           selectedDraftType: "tweet",
-  //           selectedItemStatus: activeTab,
-  //         });
-
-  //         setRefreshCounter((prev) => prev + 1);
-  //       } else {
-  //         console.log();
-
-  //         // For existing drafts, explicitly preserve status
-  //         let draftType = type;
-  //         if (!draftType) {
-  //           console.log("there's draft id but no draft type");
-
-  //           // Try to determine type from storage
-  //           const thread = tweetStorage
-  //             .getThreads()
-  //             .find((t) => t.id === draftId);
-  //           if (thread) {
-  //             draftType = "thread";
-  //           } else {
-  //             const tweet = tweetStorage
-  //               .getTweets()
-  //               .find((t) => t.id === draftId);
-  //             if (tweet) {
-  //               draftType = "tweet";
-  //             }
-  //           }
-  //         }
-
-  //         setEditorState({
-  //           isVisible: true,
-  //           selectedDraftId: draftId,
-  //           selectedDraftType: draftType || "tweet",
-  //           selectedItemStatus: activeTab,
-  //         });
-
-  //         setRefreshCounter((prev) => prev + 1);
-  //       }
-  //     } else if (activeTab == "scheduled") {
-  //       //
-  //       console.log("inside scheduled conditional");
-  //     }
-  //   },
-  //   [activeTab]
-  // );
+  useEffect(() => {
+    setEditorState({
+      isVisible: false,
+      selectedDraftId: null,
+      selectedDraftType: null,
+    });
+  }, [activeTab]);
 
   const showEditor = useCallback(
     (draftId?: string, type?: "tweet" | "thread") => {
@@ -165,18 +104,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
               .getThreads()
               .find((t) => t.id === draftId);
             draftType = thread ? "thread" : "tweet";
-            // if (thread) {
-            //   console.log("Found thread:", thread);
-            //   draftType = "thread";
-            // } else {
-            //   const tweet = tweetStorage
-            //     .getTweets()
-            //     .find((t) => t.id === draftId);
-            //   if (tweet) {
-            //     console.log("Found tweet:", tweet);
-            //     draftType = "tweet";
-            //   }
-            // }
           }
 
           console.log("Setting editor state with type:", draftType);

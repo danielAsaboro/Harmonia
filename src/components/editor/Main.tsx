@@ -49,8 +49,9 @@ export default function PlayGround({
   const [threadId, setThreadId] = useState<string | null>(null);
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
+  const [contentChanged, setContentChanged] = useState(false);
 
-  // Initialize editor with proper state
+  // // Initialize editor with proper state
   useEffect(() => {
     const initializeEditor = async () => {
       if (draftId) {
@@ -113,9 +114,57 @@ export default function PlayGround({
     }
   }, [draftId, draftType]);
 
-  // Save and sync whenever tweets change
+  // // Save and sync whenever tweets change
+  // useEffect(() => {
+  //   if (!isLoading && tweets.length > 0) {
+  //     setSaveState((prev) => ({
+  //       ...prev,
+  //       isProcessing: true,
+  //       pendingOperations: prev.pendingOperations + 1,
+  //       lastSaveAttempt: new Date(),
+  //     }));
+
+  //     try {
+  //       if (isThread && threadId) {
+  //         // Get the first tweet to determine status and scheduling
+  //         const firstTweet = tweets[0];
+  //         const thread: Thread = {
+  //           id: threadId,
+  //           tweetIds: tweets.map((t) => t.id),
+  //           createdAt: new Date(),
+  //           // Preserve the status and scheduledFor from the tweets
+  //           status: firstTweet.status,
+  //           scheduledFor: firstTweet.scheduledFor,
+  //         };
+  //         tweetStorage.saveThread(thread, tweets);
+  //       } else {
+  //         tweetStorage.saveTweet(tweets[0]);
+  //       }
+
+  //       setSaveState((prev) => ({
+  //         ...prev,
+  //         isProcessing: false,
+  //         pendingOperations: Math.max(0, prev.pendingOperations - 1),
+  //         lastSuccessfulSave: new Date(),
+  //         errorCount: 0,
+  //       }));
+  //       refreshSidebar();
+  //     } catch (error) {
+  //       setSaveState((prev) => ({
+  //         ...prev,
+  //         isProcessing: false,
+  //         errorCount: prev.errorCount + 1,
+  //         pendingOperations: Math.max(0, prev.pendingOperations - 1),
+  //       }));
+  //       console.error("Error saving tweets:", error);
+  //     }
+  //   }
+  // }, [tweets, isThread, draftId, threadId, isLoading]);
+
+  // In Main.tsx, around line 69
   useEffect(() => {
-    if (!isLoading && tweets.length > 0) {
+    if (!isLoading && tweets.length > 0 && contentChanged) {
+      // Only run if content changed
       setSaveState((prev) => ({
         ...prev,
         isProcessing: true,
@@ -125,13 +174,11 @@ export default function PlayGround({
 
       try {
         if (isThread && threadId) {
-          // Get the first tweet to determine status and scheduling
           const firstTweet = tweets[0];
           const thread: Thread = {
             id: threadId,
             tweetIds: tweets.map((t) => t.id),
-            createdAt: new Date(),
-            // Preserve the status and scheduledFor from the tweets
+            createdAt: firstTweet.createdAt,
             status: firstTweet.status,
             scheduledFor: firstTweet.scheduledFor,
           };
@@ -148,6 +195,7 @@ export default function PlayGround({
           errorCount: 0,
         }));
         refreshSidebar();
+        setContentChanged(false); // Reset the flag after successful save
       } catch (error) {
         setSaveState((prev) => ({
           ...prev,
@@ -158,8 +206,7 @@ export default function PlayGround({
         console.error("Error saving tweets:", error);
       }
     }
-  }, [tweets, isThread, draftId, threadId, isLoading]);
-
+  }, [tweets, isThread, threadId, isLoading, contentChanged]); // Add contentChanged to dependencies
   // Clean up when component unmounts
   useEffect(() => {
     return () => setTweets([]);
@@ -189,6 +236,7 @@ export default function PlayGround({
     };
 
     setTweets(ensureUniqueIds(newTweets));
+    setContentChanged(true);
 
     if (isThread && threadId) {
       const thread: Thread = {
@@ -338,6 +386,7 @@ export default function PlayGround({
 
       // Save the updated tweets
       setTweets(newTweets);
+      setContentChanged(true);
 
       // If it's a thread, save with thread context
       if (isThread && threadId) {
