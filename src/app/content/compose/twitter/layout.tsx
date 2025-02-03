@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { EditorProvider, useEditor } from "@/components/editor/context/Editor";
 import { Tweet, Thread } from "@/types/tweet";
 import { UserAccountProvider } from "@/components/editor/context/account";
-import ConfirmDialog from "@/components/editor/ConfirmDialog";
 import { SidebarItem } from "@/components/editor/SidebarItem";
 import { tweetStorage } from "@/utils/localStorage";
 

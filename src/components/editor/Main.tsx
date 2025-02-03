@@ -114,54 +114,6 @@ export default function PlayGround({
     }
   }, [draftId, draftType]);
 
-  // // Save and sync whenever tweets change
-  // useEffect(() => {
-  //   if (!isLoading && tweets.length > 0) {
-  //     setSaveState((prev) => ({
-  //       ...prev,
-  //       isProcessing: true,
-  //       pendingOperations: prev.pendingOperations + 1,
-  //       lastSaveAttempt: new Date(),
-  //     }));
-
-  //     try {
-  //       if (isThread && threadId) {
-  //         // Get the first tweet to determine status and scheduling
-  //         const firstTweet = tweets[0];
-  //         const thread: Thread = {
-  //           id: threadId,
-  //           tweetIds: tweets.map((t) => t.id),
-  //           createdAt: new Date(),
-  //           // Preserve the status and scheduledFor from the tweets
-  //           status: firstTweet.status,
-  //           scheduledFor: firstTweet.scheduledFor,
-  //         };
-  //         tweetStorage.saveThread(thread, tweets);
-  //       } else {
-  //         tweetStorage.saveTweet(tweets[0]);
-  //       }
-
-  //       setSaveState((prev) => ({
-  //         ...prev,
-  //         isProcessing: false,
-  //         pendingOperations: Math.max(0, prev.pendingOperations - 1),
-  //         lastSuccessfulSave: new Date(),
-  //         errorCount: 0,
-  //       }));
-  //       refreshSidebar();
-  //     } catch (error) {
-  //       setSaveState((prev) => ({
-  //         ...prev,
-  //         isProcessing: false,
-  //         errorCount: prev.errorCount + 1,
-  //         pendingOperations: Math.max(0, prev.pendingOperations - 1),
-  //       }));
-  //       console.error("Error saving tweets:", error);
-  //     }
-  //   }
-  // }, [tweets, isThread, draftId, threadId, isLoading]);
-
-  // In Main.tsx, around line 69
   useEffect(() => {
     if (!isLoading && tweets.length > 0 && contentChanged) {
       // Only run if content changed
@@ -206,7 +158,8 @@ export default function PlayGround({
         console.error("Error saving tweets:", error);
       }
     }
-  }, [tweets, isThread, threadId, isLoading, contentChanged]); // Add contentChanged to dependencies
+  }, [tweets, isThread, threadId, isLoading, contentChanged]);
+
   // Clean up when component unmounts
   useEffect(() => {
     return () => setTweets([]);
