@@ -8,7 +8,6 @@ import ThreadPreview from "./ThreadPreview";
 import { useEditor } from "./context/Editor";
 import { PenSquare, Eye, Save, Clock, Send, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import SchedulePicker from "./SchedulePicker";
 import { SaveStatus } from "./storage/SaveStatus";
 import { useUserAccount } from "./context/account";
 import CharacterCount, { AddTweetButton, ThreadPosition } from "./extras";
@@ -19,6 +18,7 @@ import {
   removeMediaFile,
   storeMediaFile,
 } from "./media/indexedDB";
+import SchedulePicker from "../scheduler/SchedulePicker";
 
 export default function PlayGround({
   draftId,
@@ -756,12 +756,35 @@ export default function PlayGround({
           getMediaUrl={getMediaFile}
         />
       )}
-
       {showScheduler && (
-        <SchedulePicker
-          onSchedule={handleSchedulePost}
-          onCancel={() => setShowScheduler(false)}
-        />
+        <div
+          className="fixed inset-0 
+      bg-black/50 
+      backdrop-blur-sm 
+      flex items-center justify-center 
+      z-50 
+      p-4 
+      animate-fadeIn   // More standard Tailwind animation
+      duration-300 
+      ease-out"
+          onClick={(e) => {
+            // Only close if clicking outside the picker
+            if (e.target === e.currentTarget) {
+              setShowScheduler(false);
+            }
+          }}
+        >
+          <div
+            className="transform transition-all duration-300 scale-100 opacity-100"
+            // Prevent clicks inside from closing
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SchedulePicker
+              onSchedule={handleSchedulePost}
+              onCancel={() => setShowScheduler(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

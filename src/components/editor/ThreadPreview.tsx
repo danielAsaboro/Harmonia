@@ -1,12 +1,12 @@
 // src/components/ThreadPreview.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Tweet } from "@/types/tweet";
 
 interface ThreadPreviewProps {
   tweets: Tweet[];
   onClose: () => void;
-  getMediaUrl: (id: string) => Promise<string | null>; // Update type
+  getMediaUrl: (id: string) => Promise<string | null>;
 }
 
 export default function ThreadPreview({
@@ -15,6 +15,20 @@ export default function ThreadPreview({
   getMediaUrl,
 }: ThreadPreviewProps) {
   const [mediaUrls, setMediaUrls] = useState<Record<string, string | null>>({});
+
+  // Add keyboard event listener for Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     const loadMediaUrls = async () => {
@@ -37,8 +51,14 @@ export default function ThreadPreview({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-gray-900 rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the preview
+      >
         <div className="flex justify-between items-center mb-4">
           <div>
             <h2 className="text-xl font-bold text-white">Thread Preview</h2>
