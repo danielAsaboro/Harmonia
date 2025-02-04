@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
     // Revoke the access token (optional but recommended)
     try {
       const client = await getTwitterClient(tokens);
-      await client.v2.revokeOAuth2Token();
+      // await client.v2.revokeOAuth2Token();
+      await client.revokeOAuth2Token(JSON.parse(tokens).accessToken);
       revokeAttempted = true;
       revokeSuccess = true;
     } catch (revokeError) {

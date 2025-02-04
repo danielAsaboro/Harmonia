@@ -2,12 +2,20 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Twitter, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 export default function TwitterAuthPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TwitterAuthPageContent />
+    </Suspense>
+  );
+}
+
+function TwitterAuthPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("returnUrl") || "/content/compose/twitter";
