@@ -1,13 +1,17 @@
-// app/compose/twitter/layout.tsx
+// app/content/compose/twitter/layout.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { EditorProvider, useEditor } from "@/components/editor/context/Editor";
 import { Tweet, Thread } from "@/types/tweet";
-import { UserAccountProvider } from "@/components/editor/context/account";
+import {
+  UserAccountProvider,
+  useUserAccount,
+} from "@/components/editor/context/account";
 import { SidebarItem } from "@/components/editor/SidebarItem";
 import { tweetStorage } from "@/utils/localStorage";
 import { Calendar } from "lucide-react";
 import Link from "next/link";
+import LoadingState from "@/components/editor/LoadingState";
 
 function EditorSidebar() {
   const {
@@ -222,6 +226,7 @@ function EditorSidebar() {
   );
 }
 
+
 export default function RootLayout({
   children,
 }: {
@@ -230,11 +235,29 @@ export default function RootLayout({
   return (
     <UserAccountProvider>
       <EditorProvider>
-        <div className="flex">
-          <EditorSidebar />
-          <main className="flex-1">{children}</main>
-        </div>
+        <AuthErrorHandler>
+          <React.Suspense fallback={<LoadingState />}>
+            <div className="flex">
+              <EditorSidebar />
+              <main className="flex-1">{children}</main>
+            </div>
+          </React.Suspense>
+        </AuthErrorHandler>
       </EditorProvider>
     </UserAccountProvider>
   );
+}
+
+// New component to handle auth errors within the provider context
+function AuthErrorHandler({ children }: { children: React.ReactNode }) {
+  const { error } = useUserAccount();
+
+  // If there's an auth error, redirect to login
+  useEffect(() => {
+    if (error) {
+      window.location.href = "/auth/twitter";
+    }
+  }, [error]);
+
+  return <>{children}</>;
 }

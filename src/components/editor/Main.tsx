@@ -24,7 +24,11 @@ export default function PlayGround({
   draftId,
   draftType,
 }: UnifiedTweetComposerProps) {
-  const { name: userName, handle: userTwitterHandle } = useUserAccount();
+  const {
+    name: userName,
+    handle: userTwitterHandle,
+    profileImageUrl,
+  } = useUserAccount();
   const {
     hideEditor,
     loadDraft,
@@ -589,7 +593,15 @@ export default function PlayGround({
 
             <div className="flex gap-3">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 rounded-full bg-gray-800" />
+                {profileImageUrl ? (
+                  <img
+                    src={profileImageUrl}
+                    alt={userName}
+                    className="w-12 h-12 rounded-full"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gray-800" />
+                )}
               </div>
 
               <div className="flex-1 min-w-0">

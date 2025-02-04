@@ -1,9 +1,15 @@
 // app/compose/twitter/page.tsx
 "use client";
 
+import {
+  UserAccountProvider,
+  useUserAccount,
+} from "@/components/editor/context/account";
 import { useEditor } from "@/components/editor/context/Editor";
+import LoadingState from "@/components/editor/LoadingState";
 import PlayGround from "@/components/editor/Main";
 import { PenSquare } from "lucide-react";
+import { useEffect } from "react";
 
 function WelcomeScreen() {
   const { showEditor, refreshSidebar } = useEditor();
@@ -30,8 +36,20 @@ function WelcomeScreen() {
   );
 }
 
-export default function TwitterEditor() {
+function TwitterEditorContent() {
   const { editorState } = useEditor();
+  const { isLoading } = useUserAccount();
+
+  const userAccount = useUserAccount();
+  console.log("User Account Context:", userAccount);
+
+  useEffect(() => {
+    console.log("Current user account loading state:", userAccount.isLoading);
+  }, [userAccount]);
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -49,9 +67,17 @@ export default function TwitterEditor() {
   );
 }
 
+export default function TwitterEditor() {
+  return (
+    <UserAccountProvider>
+      <TwitterEditorContent />
+    </UserAccountProvider>
+  );
+}
+
 // Content Studio
 
-// Twitter Post EduseEditor
+// Twitter Post Editor
 // Telegram Response Templates
 // Content Calendar
 // Approval Workflow
