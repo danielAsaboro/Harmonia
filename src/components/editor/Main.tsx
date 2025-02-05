@@ -918,8 +918,8 @@ export default function PlayGround({
         </div>
       )}
       <PublishingModal
-        // isOpen={publishingStatus !== null}
-        isOpen={true}
+        isOpen={publishingStatus !== null}
+        // isOpen={true}
         onClose={() => {
           setPublishingStatus(null);
           setPublishingError(null);
