@@ -13,6 +13,7 @@ import { Calendar, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import LoadingState from "@/components/editor/LoadingState";
 import { KeyboardProvider, useKeyboard } from "@/context/keyboard-context";
+import KeyboardShortcutsDialog from "@/components/keyboard/KeyboardShortcutsDialog";
 import SearchModal from "@/components/search/SearchModal";
 
 function EditorSidebar() {
@@ -294,7 +295,43 @@ function EditorSidebar() {
 }
 
 function WholeEditor({ children }: { children: React.ReactNode }) {
-  const { showSearch, setShowSearch } = useKeyboard();
+  const { showSearch, setShowSearch, showShortcuts, setShowShortcuts } =
+    useKeyboard();
+
+  // Monitor showSearch changes
+  // and close shortcuts if needed
+  useEffect(() => {
+    if (showSearch && showShortcuts) {
+      setShowShortcuts(false);
+    }
+  }, [showSearch]);
+
+  // Monitor showShortcuts changes
+  // and close search if needed
+  useEffect(() => {
+    if (showShortcuts && showSearch) {
+      setShowSearch(false);
+    }
+  }, [showShortcuts]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (showSearch) {
+          setShowSearch(false);
+        }
+        if (showShortcuts) {
+          setShowShortcuts(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showSearch, showShortcuts, setShowSearch, setShowShortcuts]);
 
   return (
     <>
@@ -306,10 +343,15 @@ function WholeEditor({ children }: { children: React.ReactNode }) {
           <main className="h-full">{children}</main>
         </div>
       </div>
+      <KeyboardShortcutsDialog
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
       <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </>
   );
 }
+
 export default function RootLayout({
   children,
 }: {

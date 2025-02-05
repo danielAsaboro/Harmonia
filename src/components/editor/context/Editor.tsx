@@ -32,6 +32,9 @@ type EditorContextType = {
   refreshCounter: number;
   isSidebarVisible: boolean;
   toggleSidebar: () => void;
+  handleNewDraft: () => void;
+  handleScheduleDraft: () => void;
+  handlePublishDraft: () => void;
 };
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -48,6 +51,39 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarVisible((prev) => !prev);
+  }, []);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleTabSwitch = (e: CustomEvent<Tab>) => {
+      setActiveTab(e.detail);
+    };
+
+    const handleNewDraft = () => {
+      showEditor();
+    };
+
+    const handleScheduleDraft = () => {
+      // We'll implement this when we add scheduling functionality
+      window.dispatchEvent(new CustomEvent("openScheduler"));
+    };
+
+    const handlePublishDraft = () => {
+      // We'll implement this when we add publishing functionality
+      window.dispatchEvent(new CustomEvent("publishCurrent"));
+    };
+
+    window.addEventListener("switchTab", handleTabSwitch as EventListener);
+    window.addEventListener("newDraft", handleNewDraft);
+    window.addEventListener("scheduleDraft", handleScheduleDraft);
+    window.addEventListener("publishDraft", handlePublishDraft);
+
+    return () => {
+      window.removeEventListener("switchTab", handleTabSwitch as EventListener);
+      window.removeEventListener("newDraft", handleNewDraft);
+      window.removeEventListener("scheduleDraft", handleScheduleDraft);
+      window.removeEventListener("publishDraft", handlePublishDraft);
+    };
   }, []);
 
   useEffect(() => {
@@ -221,6 +257,11 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         refreshCounter,
         isSidebarVisible,
         toggleSidebar,
+        handleNewDraft: () => window.dispatchEvent(new CustomEvent("newDraft")),
+        handleScheduleDraft: () =>
+          window.dispatchEvent(new CustomEvent("scheduleDraft")),
+        handlePublishDraft: () =>
+          window.dispatchEvent(new CustomEvent("publishDraft")),
       }}
     >
       {children}
