@@ -19,7 +19,7 @@ import {
   storeMediaFile,
 } from "./media/indexedDB";
 import SchedulePicker from "../scheduler/SchedulePicker";
-import { useKeyboard } from "@/context/keyboard-context";
+import { cn } from "@/utils/ts-merge";
 
 export default function PlayGround({
   draftId,
@@ -29,6 +29,8 @@ export default function PlayGround({
     name: userName,
     handle: userTwitterHandle,
     profileImageUrl,
+    isLoading: isUserAccountDetailsLoading,
+    getAvatar,
   } = useUserAccount();
   const {
     hideEditor,
@@ -55,7 +57,6 @@ export default function PlayGround({
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
   const [contentChanged, setContentChanged] = useState(false);
-  const { showSearch, setShowSearch } = useKeyboard();
 
   // // Initialize editor with proper state
   useEffect(() => {
@@ -170,6 +171,32 @@ export default function PlayGround({
   useEffect(() => {
     return () => setTweets([]);
   }, []);
+
+  const validateTweets = (): boolean => {
+    const MAX_CHARS = 280;
+    const invalidTweets = tweets.filter(
+      (tweet) => tweet.content.length > MAX_CHARS
+    );
+
+    if (invalidTweets.length > 0) {
+      // Find first invalid tweet position
+      const position =
+        tweets.findIndex((tweet) => tweet.content.length > MAX_CHARS) + 1;
+      const message =
+        tweets.length > 1
+          ? `Tweet ${position} exceeds ${MAX_CHARS} characters`
+          : `Tweet exceeds ${MAX_CHARS} characters`;
+
+      alert(message);
+      return false;
+    }
+    return true;
+  };
+
+  const validateTweetsLength = (): boolean => {
+    const MAX_CHARS = 280;
+    return !tweets.some((tweet) => tweet.content.length > MAX_CHARS);
+  };
 
   const ensureUniqueIds = (tweetsArray: Tweet[]): Tweet[] => {
     const seenIds = new Set<string>();
@@ -440,6 +467,7 @@ export default function PlayGround({
   };
 
   const handleSchedulePost = (scheduledDate: Date) => {
+    if (!validateTweets()) return;
     try {
       // Convert tweets to scheduled status
       const updatedTweets = tweets.map((tweet) => ({
@@ -476,7 +504,10 @@ export default function PlayGround({
     }
   };
 
+  const isValidToPublish = validateTweetsLength();
+
   const handlePublish = () => {
+    if (!validateTweets()) return;
     const updatedTweets = tweets.map((tweet) => ({
       ...tweet,
       status: "published" as const,
@@ -561,8 +592,19 @@ export default function PlayGround({
               <SaveStatus saveState={saveState} />
 
               <button
-                className="px-4 py-1.5 text-gray-400 hover:bg-gray-800 rounded-full flex items-center gap-2"
-                onClick={() => setShowScheduler(true)}
+                className={cn(
+                  "px-4 py-1.5 rounded-full flex items-center gap-2",
+                  "text-gray-400 hover:bg-gray-800",
+                  !isValidToPublish &&
+                    "opacity-50 cursor-not-allowed hover:bg-transparent"
+                )}
+                onClick={() => isValidToPublish && setShowScheduler(true)}
+                disabled={!isValidToPublish}
+                title={
+                  !isValidToPublish
+                    ? "Tweet content exceeds character limit"
+                    : undefined
+                }
               >
                 <Clock size={18} />
                 Schedule
@@ -571,7 +613,18 @@ export default function PlayGround({
           ) : undefined}
           <button
             onClick={handlePublish}
-            className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
+            className={cn(
+              "px-4 py-1.5 bg-blue-500 text-white rounded-full",
+              "hover:bg-blue-600 flex items-center gap-2",
+              !isValidToPublish &&
+                "opacity-50 cursor-not-allowed hover:bg-blue-500"
+            )}
+            disabled={!isValidToPublish}
+            title={
+              !isValidToPublish
+                ? "Tweet content exceeds character limit"
+                : undefined
+            }
           >
             <Send size={18} />
             Publish
@@ -594,23 +647,30 @@ export default function PlayGround({
             )}
 
             <div className="flex gap-3">
-              <div className="flex-shrink-0">
-                {profileImageUrl ? (
-                  <img
-                    src={profileImageUrl}
-                    alt={userName}
-                    className="w-12 h-12 rounded-full"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-gray-800" />
-                )}
-              </div>
+              <div className="flex-shrink-0">{getAvatar()}</div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 text-gray-400">
-                    <span className="font-bold text-white">{userName}</span>
-                    <span>{userTwitterHandle}</span>
+                    <span
+                      className={cn(
+                        "font-bold",
+                        isUserAccountDetailsLoading
+                          ? "text-gray-600 animate-pulse"
+                          : "text-white"
+                      )}
+                    >
+                      {userName}
+                    </span>
+                    <span
+                      className={cn(
+                        isUserAccountDetailsLoading
+                          ? "text-gray-700 animate-pulse"
+                          : "text-gray-400"
+                      )}
+                    >
+                      {userTwitterHandle}
+                    </span>
                   </div>
                   {(tweets.length === 1 || index > 0) &&
                     activeTab === "drafts" && (

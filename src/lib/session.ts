@@ -16,5 +16,16 @@ export async function getSession(request: NextRequest) {
         sameSite: "lax",
       });
     },
+    update: async (key: string, value: string) => {
+      // Remove existing cookie first
+      cookieStore.delete(key);
+
+      // Set new value
+      cookieStore.set(key, value, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
+    },
   };
 }

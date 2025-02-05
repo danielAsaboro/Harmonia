@@ -62,7 +62,8 @@ export async function GET(request: NextRequest) {
       expiresAt,
     };
 
-    session.set("twitter_tokens", JSON.stringify(tokens));
+    // session.set("twitter_tokens", JSON.stringify(tokens));
+    await session.update("twitter_tokens", JSON.stringify(tokens));
 
     // Redirect to the stored return URL or default
     return NextResponse.redirect(new URL(returnUrl, request.url));

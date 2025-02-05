@@ -1,5 +1,7 @@
 // /lib/twitter.ts
 import { TwitterApi } from "twitter-api-v2";
+import { getSession } from "./session";
+import { type NextRequest } from "next/server";
 
 interface TwitterTokens {
   accessToken: string;
@@ -7,7 +9,10 @@ interface TwitterTokens {
   expiresAt: number;
 }
 
-export async function getTwitterClient(tokens: string): Promise<TwitterApi> {
+export async function getTwitterClient(
+  tokens: string,
+  req?: NextRequest
+): Promise<TwitterApi> {
   try {
     const parsedTokens: TwitterTokens = JSON.parse(tokens);
 
@@ -29,8 +34,11 @@ export async function getTwitterClient(tokens: string): Promise<TwitterApi> {
       parsedTokens.refreshToken = newRefreshToken;
       parsedTokens.expiresAt = Date.now() + expiresIn * 1000;
 
-      // You'll need to implement this to update the session
-      // await updateSession('twitter_tokens', JSON.stringify(parsedTokens))
+      // Update session if request is provided
+      if (req) {
+        const session = await getSession(req);
+        await session.update("twitter_tokens", JSON.stringify(parsedTokens));
+      }
     }
 
     return new TwitterApi(parsedTokens.accessToken);
