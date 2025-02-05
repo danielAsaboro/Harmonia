@@ -6,7 +6,7 @@ import MediaUpload from "./media/MediaUpload";
 import MediaPreview from "./media/MediaPreview";
 import ThreadPreview from "./ThreadPreview";
 import { useEditor } from "./context/Editor";
-import { PenSquare, Eye, Save, Clock, Send, X } from "lucide-react";
+import { PenSquare, Eye, Save, Clock, Send, X, Search } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { SaveStatus } from "./storage/SaveStatus";
 import { useUserAccount } from "./context/account";
@@ -19,6 +19,7 @@ import {
   storeMediaFile,
 } from "./media/indexedDB";
 import SchedulePicker from "../scheduler/SchedulePicker";
+import { useKeyboard } from "@/context/keyboard-context";
 
 export default function PlayGround({
   draftId,
@@ -54,6 +55,7 @@ export default function PlayGround({
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
   const [contentChanged, setContentChanged] = useState(false);
+  const { showSearch, setShowSearch } = useKeyboard();
 
   // // Initialize editor with proper state
   useEffect(() => {

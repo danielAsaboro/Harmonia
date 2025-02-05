@@ -30,6 +30,8 @@ type EditorContextType = {
   loadScheduledItem: () => Tweet | ThreadWithTweets | null;
   refreshSidebar: () => void;
   refreshCounter: number;
+  isSidebarVisible: boolean;
+  toggleSidebar: () => void;
 };
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -37,11 +39,16 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<Tab>("drafts");
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [editorState, setEditorState] = useState<EditorState>({
     isVisible: false,
     selectedDraftId: null,
     selectedDraftType: null,
   });
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarVisible((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     setEditorState({
@@ -212,6 +219,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         loadScheduledItem,
         refreshSidebar,
         refreshCounter,
+        isSidebarVisible,
+        toggleSidebar,
       }}
     >
       {children}
