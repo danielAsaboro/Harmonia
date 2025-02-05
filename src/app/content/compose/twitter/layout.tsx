@@ -361,11 +361,11 @@ export default function RootLayout({
     <UserAccountProvider>
       <EditorProvider>
         <KeyboardProvider>
-          {/* <AuthErrorHandler> */}
-          <React.Suspense fallback={<LoadingState />}>
-            <WholeEditor>{children}</WholeEditor>
-          </React.Suspense>
-          {/* </AuthErrorHandler> */}
+          <AuthErrorHandler>
+            <React.Suspense fallback={<LoadingState />}>
+              <WholeEditor>{children}</WholeEditor>
+            </React.Suspense>
+          </AuthErrorHandler>
         </KeyboardProvider>
       </EditorProvider>
     </UserAccountProvider>
@@ -373,15 +373,15 @@ export default function RootLayout({
 }
 
 // New component to handle auth errors within the provider context
-// function AuthErrorHandler({ children }: { children: React.ReactNode }) {
-//   const { error } = useUserAccount();
+function AuthErrorHandler({ children }: { children: React.ReactNode }) {
+  const { error } = useUserAccount();
 
-//   // If there's an auth error, redirect to login
-//   useEffect(() => {
-//     if (error) {
-//       window.location.href = "/auth/twitter";
-//     }
-//   }, [error]);
+  // If there's an auth error, redirect to login
+  useEffect(() => {
+    if (error) {
+      window.location.href = "/auth/twitter";
+    }
+  }, [error]);
 
-//   return <>{children}</>;
-// }
+  return <>{children}</>;
+}

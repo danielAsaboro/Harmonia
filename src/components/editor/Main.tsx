@@ -20,6 +20,7 @@ import {
 } from "./media/indexedDB";
 import SchedulePicker from "../scheduler/SchedulePicker";
 import { cn } from "@/utils/ts-merge";
+import PublishingModal from "./PublishingModal";
 
 export default function PlayGround({
   draftId,
@@ -57,6 +58,10 @@ export default function PlayGround({
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
   const [contentChanged, setContentChanged] = useState(false);
+  const [publishingStatus, setPublishingStatus] = useState<
+    "publishing" | "success" | "error" | null
+  >(null);
+  const [publishingError, setPublishingError] = useState<string | null>(null);
 
   // // Initialize editor with proper state
   useEffect(() => {
@@ -506,29 +511,81 @@ export default function PlayGround({
 
   const isValidToPublish = validateTweetsLength();
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!validateTweets()) return;
-    const updatedTweets = tweets.map((tweet) => ({
-      ...tweet,
-      status: "published" as const,
-    }));
 
-    if (isThread && threadId) {
-      const thread: Thread = {
-        id: threadId,
-        tweetIds: updatedTweets.map((t) => t.id),
-        createdAt: new Date(),
-        status: "published",
-      };
-      tweetStorage.saveThread(thread, updatedTweets, true);
-    } else {
-      tweetStorage.saveTweet(updatedTweets[0], true);
+    setPublishingStatus("publishing");
+    setPublishingError(null);
+
+    try {
+      // Get media data for each tweet
+      const tweetsWithMedia = await Promise.all(
+        tweets.map(async (tweet) => {
+          let mediaUrls: string[] = [];
+          if (tweet.media && tweet.media.length > 0) {
+            mediaUrls = await Promise.all(
+              tweet.media.map(async (mediaId) => {
+                const mediaData = await getMediaFile(mediaId);
+                return mediaData || "";
+              })
+            );
+          }
+          return {
+            content: tweet.content,
+            media: mediaUrls,
+          };
+        })
+      );
+
+      // Post to Twitter API - handles both single tweets and threads
+      const response = await fetch("/api/twitter/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isThread ? tweetsWithMedia : tweetsWithMedia[0]),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to post to Twitter");
+      }
+
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      // Update local storage
+      if (isThread && threadId) {
+        const thread: Thread = {
+          id: threadId,
+          tweetIds: tweets.map((t) => t.id),
+          createdAt: new Date(),
+          status: "published",
+        };
+        tweetStorage.saveThread(
+          thread,
+          tweets.map((t) => ({ ...t, status: "published" as const })),
+          true
+        );
+      } else {
+        tweetStorage.saveTweet(
+          { ...tweets[0], status: "published" as const },
+          true
+        );
+      }
+
+      setPublishingStatus("success");
+      setTimeout(() => {
+        setPublishingStatus(null);
+        hideEditor();
+        refreshSidebar();
+      }, 2000); // Auto-close after success
+    } catch (error) {
+      console.error("Error publishing:", error);
+      setPublishingError(
+        error instanceof Error
+          ? error.message
+          : "Failed to publish. Please try again."
+      );
+      setPublishingStatus("error");
     }
-
-    hideEditor();
-    refreshSidebar();
   };
-
   const handleSaveAsDraft = () => {
     if (isThread && threadId) {
       const thread: Thread = {
@@ -860,6 +917,17 @@ export default function PlayGround({
           </div>
         </div>
       )}
+      <PublishingModal
+        // isOpen={publishingStatus !== null}
+        isOpen={true}
+        onClose={() => {
+          setPublishingStatus(null);
+          setPublishingError(null);
+        }}
+        status={publishingStatus || "publishing"}
+        error={publishingError || undefined}
+        isThread={isThread}
+      />
     </div>
   );
 }
