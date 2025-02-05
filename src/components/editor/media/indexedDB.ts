@@ -1,6 +1,9 @@
 // indexedDB.ts
 import { v4 as uuidv4 } from "uuid";
 
+// Check if we're in a browser environment
+const isBrowser = typeof window !== "undefined" && window.indexedDB;
+
 interface StoredMedia {
   id: string;
   data: string; // base64 encoded file data
@@ -15,10 +18,18 @@ class MediaStorageService {
   private db: IDBDatabase | null = null;
 
   constructor() {
-    this.initDatabase();
+    if (isBrowser) {
+      this.initDatabase();
+    }
   }
 
   private initDatabase(): Promise<IDBDatabase> {
+    if (!isBrowser) {
+      return Promise.reject(
+        new Error("IndexedDB is not available in this environment")
+      );
+    }
+
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, 1);
 
@@ -42,11 +53,20 @@ class MediaStorageService {
   }
 
   private async getDB(): Promise<IDBDatabase> {
+    if (!isBrowser) {
+      throw new Error("IndexedDB is not available in this environment");
+    }
+
     if (this.db) return this.db;
     return this.initDatabase();
   }
 
   async storeMediaFile(file: File): Promise<string> {
+    if (!isBrowser) {
+      // Fallback for server-side - generate a unique ID
+      return Promise.resolve(uuidv4());
+    }
+
     const db = await this.getDB();
     const mediaId = uuidv4();
 
@@ -75,6 +95,11 @@ class MediaStorageService {
   }
 
   getMediaFile(mediaId: string): Promise<string | null> {
+    if (!isBrowser) {
+      // Fallback for server-side
+      return Promise.resolve(null);
+    }
+
     return new Promise(async (resolve, reject) => {
       const db = await this.getDB();
       const transaction = db.transaction([this.storeName], "readonly");
@@ -91,6 +116,11 @@ class MediaStorageService {
   }
 
   removeMediaFile(mediaId: string): Promise<void> {
+    if (!isBrowser) {
+      // Fallback for server-side
+      return Promise.resolve();
+    }
+
     return new Promise(async (resolve, reject) => {
       const db = await this.getDB();
       const transaction = db.transaction([this.storeName], "readwrite");
@@ -103,6 +133,11 @@ class MediaStorageService {
   }
 
   async cleanupOldMedia(maxFiles = 50): Promise<void> {
+    if (!isBrowser) {
+      // Fallback for server-side
+      return Promise.resolve();
+    }
+
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([this.storeName], "readwrite");
