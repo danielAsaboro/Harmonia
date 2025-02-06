@@ -739,6 +739,8 @@ export default function PlayGround({
                       </button>
                     )}
                 </div>
+
+                {/* Make textarea readonly if not in drafts */}
                 <textarea
                   value={tweet.content}
                   onFocus={() => setCurrentlyEditedTweet(index)}
@@ -751,40 +753,21 @@ export default function PlayGround({
                   placeholder={
                     index === 0 ? "What's happening?" : "Add to thread..."
                   }
-                  className={`w-full bg-transparent border-none resize-none focus:ring-0 focus:outline-none text-white min-h-[60px] mt-2 ${
-                    tweet.content.includes("#") || tweet.content.includes("@")
-                      ? "highlight-tags text-red-700"
-                      : "text-red-700"
-                  }`}
+                  className="w-full bg-transparent border-none resize-none focus:ring-0 focus:outline-none text-white min-h-[60px] mt-2"
                   ref={(el) => setTextAreaRef(el, index)}
-                />
-                {/* Make textarea readonly if not in drafts */}
-                {/* <textarea
-                    value={tweet.content}
-                    onFocus={() => setCurrentlyEditedTweet(index)}
-                    onChange={(e) => {
-                      if (activeTab === "drafts") {
-                        handleTweetChange(index, e.target.value);
-                        adjustTextareaHeight(e.target);
-                      }
-                    }}
-                    placeholder={
-                      index === 0 ? "What's happening?" : "Add to thread..."
+                  onKeyDown={(e) => {
+                    if (
+                      activeTab === "drafts" &&
+                      e.key === "Enter" &&
+                      e.shiftKey
+                    ) {
+                      e.preventDefault();
+                      addTweetToThread(index);
                     }
-                    className="w-full bg-transparent border-none resize-none focus:ring-0 focus:outline-none text-white min-h-[60px] mt-2"
-                    ref={(el) => setTextAreaRef(el, index)}
-                    onKeyDown={(e) => {
-                      if (
-                        activeTab === "drafts" &&
-                        e.key === "Enter" &&
-                        e.shiftKey
-                      ) {
-                        e.preventDefault();
-                        addTweetToThread(index);
-                      }
-                    }}
-                    readOnly={activeTab !== "drafts"}
-                  /> */}
+                  }}
+                  readOnly={activeTab !== "drafts"}
+                />
+
                 {/* Media Preview */}
                 {tweet.media && tweet.media.length > 0 && (
                   <div className="mt-2">
