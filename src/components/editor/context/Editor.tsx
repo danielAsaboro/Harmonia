@@ -96,7 +96,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   const showEditor = useCallback(
     (draftId?: string, type?: "tweet" | "thread") => {
-      if (activeTab === "scheduled") {
+      if (activeTab === "scheduled" || activeTab === "published") {
         // For scheduled items, just show the preview
         if (draftId) {
           setEditorState({
@@ -176,7 +176,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       return (
         tweets.find(
           (t) =>
-            t.id === editorState.selectedDraftId && t.status === "scheduled"
+            t.id === editorState.selectedDraftId &&
+            (t.status === "scheduled" || t.status === "published")
         ) || null
       );
     }
@@ -184,7 +185,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     const threads = tweetStorage.getThreads();
     const thread = threads.find((t) => t.id === editorState.selectedDraftId);
 
-    if (thread && thread.status === "scheduled") {
+    if (
+      thread &&
+      (thread.status === "scheduled" || thread.status === "published")
+    ) {
       const tweets = tweetStorage
         .getTweets()
         .filter((t) => t.threadId === thread.id)

@@ -22,6 +22,43 @@ import SchedulePicker from "../scheduler/SchedulePicker";
 import { cn } from "@/utils/ts-merge";
 import PublishingModal from "./PublishingModal";
 
+//  helper function
+const repurposeTweet = (tweet: Tweet): Tweet => {
+  return {
+    id: `tweet-${uuidv4()}`,
+    content: tweet.content,
+    media: [...(tweet.media || [])],
+    createdAt: new Date(),
+    status: "draft",
+  };
+};
+
+const repurposeThread = (
+  thread: Thread,
+  tweets: Tweet[]
+): [Thread, Tweet[]] => {
+  const newThreadId = `thread-${uuidv4()}`;
+  const newThread: Thread = {
+    id: newThreadId,
+    tweetIds: [],
+    createdAt: new Date(),
+    status: "draft",
+  };
+
+  const newTweets = tweets.map((tweet, index) => ({
+    id: `tweet-${uuidv4()}`,
+    content: tweet.content,
+    media: [...(tweet.media || [])],
+    createdAt: new Date(),
+    status: "draft" as const,
+    threadId: newThreadId,
+    position: index,
+  }));
+
+  newThread.tweetIds = newTweets.map((t) => t.id);
+  return [newThread, newTweets];
+};
+
 export default function PlayGround({
   draftId,
   draftType,
@@ -67,10 +104,15 @@ export default function PlayGround({
   useEffect(() => {
     const initializeEditor = async () => {
       if (draftId) {
-        const isScheduled = editorState.selectedItemStatus === "scheduled";
+        const isScheduled =
+          editorState.selectedItemStatus === "scheduled" ||
+          editorState.selectedItemStatus === "published";
         const content = isScheduled ? loadScheduledItem() : loadDraft();
 
         if (content) {
+          // Reset thread state before setting new content
+          setIsThread(false);
+
           if ("tweets" in content) {
             setIsThread(true);
             setTweets(
@@ -83,11 +125,14 @@ export default function PlayGround({
             setThreadId(content.id);
           } else {
             setTweets([content as Tweet]);
+            setThreadId(null);
           }
         }
       } else {
         // Only create new tweets in draft mode
         if (activeTab === "drafts") {
+          setIsThread(false);
+          setThreadId(null);
           const newTweet: Tweet = {
             id: `tweet-${uuidv4()}`,
             content: "",
@@ -110,6 +155,7 @@ export default function PlayGround({
     loadDraft,
     activeTab,
     loadScheduledItem,
+    editorState.selectedDraftId,
     editorState.selectedItemStatus,
   ]);
 
@@ -614,6 +660,28 @@ export default function PlayGround({
     element.style.height = `${element.scrollHeight}px`;
   };
 
+  const handleRepurpose = () => {
+    if (isThread && threadId) {
+      const [newThread, newTweets] = repurposeThread(
+        {
+          id: threadId,
+          tweetIds: tweets.map((t) => t.id),
+          createdAt: new Date(),
+          status: "draft",
+        },
+        tweets
+      );
+      tweetStorage.saveThread(newThread, newTweets, true);
+    } else {
+      const newTweet = repurposeTweet(tweets[0]);
+      tweetStorage.saveTweet(newTweet, true);
+    }
+
+    hideEditor();
+    setActiveTab("drafts");
+    refreshSidebar();
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -668,24 +736,26 @@ export default function PlayGround({
               </button>
             </>
           ) : undefined}
-          <button
-            onClick={handlePublish}
-            className={cn(
-              "px-4 py-1.5 bg-blue-500 text-white rounded-full",
-              "hover:bg-blue-600 flex items-center gap-2",
-              !isValidToPublish &&
-                "opacity-50 cursor-not-allowed hover:bg-blue-500"
-            )}
-            disabled={!isValidToPublish}
-            title={
-              !isValidToPublish
-                ? "Tweet content exceeds character limit"
-                : undefined
-            }
-          >
-            <Send size={18} />
-            Publish
-          </button>
+          {activeTab === "scheduled" ? (
+            <button
+              onClick={handlePublish}
+              className={cn(
+                "px-4 py-1.5 bg-blue-500 text-white rounded-full",
+                "hover:bg-blue-600 flex items-center gap-2",
+                !isValidToPublish &&
+                  "opacity-50 cursor-not-allowed hover:bg-blue-500"
+              )}
+              disabled={!isValidToPublish}
+              title={
+                !isValidToPublish
+                  ? "Tweet content exceeds character limit"
+                  : undefined
+              }
+            >
+              <Send size={18} />
+              Publish
+            </button>
+          ) : undefined}
         </div>
       </div>
 
@@ -841,7 +911,7 @@ export default function PlayGround({
             <Save size={18} />
             Save {isThread ? "Thread" : "Tweet"} as draft
           </button>
-        ) : (
+        ) : activeTab === "scheduled" ? (
           activeTab === "scheduled" && (
             <div className="flex items-center gap-3">
               <button
@@ -873,6 +943,18 @@ export default function PlayGround({
               >
                 <PenSquare size={18} />
                 Switch to Draft
+              </button>
+            </div>
+          )
+        ) : (
+          activeTab === "published" && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRepurpose}
+                className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
+              >
+                <PenSquare size={18} />
+                Repurpose {isThread ? "Thread" : "Tweet"}
               </button>
             </div>
           )
