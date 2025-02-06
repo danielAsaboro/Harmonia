@@ -1,43 +1,4 @@
-/* /app/globals.css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-@keyframes gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-.animate-gradient {
-  animation: gradient 8s ease infinite;
-  background-size: 200% 200%;
-}
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
- */
 /* /app/globals.css */
 @tailwind base;
 @tailwind components;
@@ -172,4 +133,23 @@ body {
 /* Smooth transitions for all interactive elements */
 button, input, select, textarea {
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.highlight-tags {
+  color: white;
+}
+
+.highlight-tags::placeholder {
+  color: #6e767d;
+}
+
+/* This uses native browser highlighting for better cursor alignment */
+.highlight-tags::-moz-selection {
+  color: #1d9bf0;
+  background: transparent;
+}
+
+.highlight-tags::selection {
+  color: #1d9bf0;
+  background: transparent;
 }

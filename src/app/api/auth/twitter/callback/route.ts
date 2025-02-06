@@ -98,7 +98,23 @@ export async function GET(request: NextRequest) {
       expiresAt,
     };
 
+    // Create the response with redirect
+    const response = NextResponse.redirect(new URL(returnUrl, request.url));
+
+    // Set the cookie correctly using NextResponse
+    response.cookies.set({
+      name: "twitter_tokens",
+      value: JSON.stringify(tokens),
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
     await session.update("twitter_tokens", JSON.stringify(tokens));
+
+    // Set a longer-lived cookie for persistence
 
     console.log("🔐 Tokens Updated in Session");
 
@@ -106,7 +122,7 @@ export async function GET(request: NextRequest) {
     const redirectUrl = new URL(returnUrl, request.url);
     console.log("🚀 Redirecting to:", redirectUrl.toString());
 
-    return NextResponse.redirect(redirectUrl);
+    return response;
   } catch (error) {
     console.error("❌ Authentication Error:", error);
     return new NextResponse("Authentication failed: Invalid credentials", {

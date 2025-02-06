@@ -361,11 +361,11 @@ export default function RootLayout({
     <UserAccountProvider>
       <EditorProvider>
         <KeyboardProvider>
-          <AuthErrorHandler>
-            <React.Suspense fallback={<LoadingState />}>
-              <WholeEditor>{children}</WholeEditor>
-            </React.Suspense>
-          </AuthErrorHandler>
+          {/* <AuthErrorHandler> */}
+          <React.Suspense fallback={<LoadingState />}>
+            <WholeEditor>{children}</WholeEditor>
+          </React.Suspense>
+          {/* </AuthErrorHandler> */}
         </KeyboardProvider>
       </EditorProvider>
     </UserAccountProvider>

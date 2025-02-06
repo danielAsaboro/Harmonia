@@ -81,6 +81,37 @@ export function UserAccountProvider({
     fetchUserData();
   }, []);
 
+  useEffect(() => {
+    const checkAndRefreshToken = async () => {
+      const tokens = localStorage.getItem("twitter_tokens");
+      if (!tokens) return;
+
+      const parsedTokens = JSON.parse(tokens);
+      const expiresAt = parsedTokens.expiresAt;
+
+      // If token expires in less than 5 minutes, refresh it
+      if (Date.now() >= expiresAt - 5 * 60 * 1000) {
+        try {
+          const response = await fetch("/api/auth/twitter/refresh", {
+            method: "POST",
+          });
+
+          if (response.ok) {
+            const newTokens = await response.json();
+            localStorage.setItem("twitter_tokens", JSON.stringify(newTokens));
+          }
+        } catch (error) {
+          console.error("Error refreshing token:", error);
+        }
+      }
+    };
+
+    checkAndRefreshToken();
+    const interval = setInterval(checkAndRefreshToken, 4 * 60 * 1000); // Check every 4 minutes
+
+    return () => clearInterval(interval);
+  }, []);
+
   const getAvatar = () => {
     if (userAccount.isLoading) return <LoadingAvatar />;
     if (userAccount.error) return <ErrorAvatar />;
