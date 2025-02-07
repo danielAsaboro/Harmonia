@@ -5,15 +5,7 @@ import Sidebar from "@/components/navigation/sidebar";
 import Header from "@/components/navigation/header";
 import { UserAccountProvider } from "@/components/editor/context/account";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Harmonia Dashboard",

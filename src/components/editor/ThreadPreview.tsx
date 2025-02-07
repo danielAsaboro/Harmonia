@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Tweet } from "@/types/tweet";
+import Image from "next/image";
 
 interface ThreadPreviewProps {
   tweets: Tweet[];
@@ -19,14 +20,14 @@ export default function ThreadPreview({
   // Add keyboard event listener for Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
 
@@ -51,11 +52,11 @@ export default function ThreadPreview({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-gray-900 rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the preview
       >
@@ -105,7 +106,7 @@ export default function ThreadPreview({
                             className="aspect-video bg-gray-800 rounded-lg overflow-hidden"
                           >
                             {isImageUrl(url) ? (
-                              <img
+                              <Image
                                 src={url}
                                 alt={`Media ${mediaIndex + 1}`}
                                 className="w-full h-full object-cover"

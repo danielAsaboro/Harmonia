@@ -1,8 +1,16 @@
 // /components/editor/context/account.tsx
 "use client";
-import { createContext, useContext, useState, useEffect, JSX } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  JSX,
+  useCallback,
+} from "react";
 import { User, UserSquare2, Loader2 } from "lucide-react";
 import { tweetStorage } from "@/utils/localStorage";
+import Image from "next/image";
 
 interface UserAccountType {
   id: string;
@@ -26,12 +34,15 @@ export function UserAccountProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const [count, setCount] = useState(0);
   // Loading avatar component
   const LoadingAvatar = () => (
     <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center animate-pulse">
       <Loader2 className="w-6 h-6 text-gray-600 animate-spin" />
     </div>
   );
+
+  console.log("number of times user endpoint called, ", count);
 
   // Error avatar component
   const ErrorAvatar = () => (
@@ -59,10 +70,11 @@ export function UserAccountProvider({
     isLoading: true,
   });
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       // First check localStorage
       const cachedDetails = tweetStorage.getUserDetails();
+
       if (cachedDetails) {
         setUserAccount({
           id: cachedDetails.id,
@@ -74,32 +86,34 @@ export function UserAccountProvider({
           isLoading: false,
         });
         return;
+      } else {
+        console.log("no user found in cache, making request");
+        const response = await fetch("/api/auth/twitter/user");
+        setCount((prev) => prev + 1);
+        if (!response.ok) {
+          throw new Error("Failed to get user data");
+        }
+
+        const userData = await response.json();
+
+        const userDetails = {
+          id: userData.id,
+          name: userData.name,
+          handle: userData.username,
+          profileImageUrl: userData.profile_image_url,
+          verified: userData.verified,
+          verifiedType: userData.verified_type,
+        };
+
+        // Save to localStorage
+        tweetStorage.saveUserDetails(userDetails);
+
+        setUserAccount({
+          ...userDetails,
+          handle: `@${userDetails.handle}`,
+          isLoading: false,
+        });
       }
-
-      const response = await fetch("/api/auth/twitter/user");
-      if (!response.ok) {
-        throw new Error("Failed to get user data");
-      }
-
-      const userData = await response.json();
-
-      const userDetails = {
-        id: userData.id,
-        name: userData.name,
-        handle: userData.username,
-        profileImageUrl: userData.profile_image_url,
-        verified: userData.verified,
-        verifiedType: userData.verified_type,
-      };
-
-      // Save to localStorage
-      tweetStorage.saveUserDetails(userDetails);
-
-      setUserAccount({
-        ...userDetails,
-        handle: `@${userDetails.handle}`,
-        isLoading: false,
-      });
     } catch (error) {
       setUserAccount((prev) => ({
         ...prev,
@@ -108,11 +122,11 @@ export function UserAccountProvider({
           error instanceof Error ? error.message : "Failed to load user data",
       }));
     }
-  };
-
-  useEffect(() => {
-    fetchUserData();
   }, []);
+
+  // useEffect(() => {
+  //   fetchUserData();
+  // }, []);
 
   useEffect(() => {
     const checkAndRefreshToken = async () => {
@@ -151,7 +165,7 @@ export function UserAccountProvider({
     if (!userAccount.profileImageUrl) return <DefaultAvatar />;
 
     return (
-      <img
+      <Image
         src={userAccount.profileImageUrl}
         alt={userAccount.name}
         className="w-12 h-12 rounded-full border-2 border-gray-700 hover:border-blue-500 transition-colors duration-200"

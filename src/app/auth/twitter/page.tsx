@@ -82,7 +82,7 @@ function TwitterAuthPageContent() {
 
           <div className="text-center">
             <p className="text-sm text-slate-500">
-              You'll be redirected back to the editor after connecting
+              You&apos;ll be redirected back to the editor after connecting
             </p>
           </div>
         </div>

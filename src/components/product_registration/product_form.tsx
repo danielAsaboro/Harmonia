@@ -266,7 +266,7 @@ const AdditionalStep = () => {
       <FormItem>
         <FormLabel required>Funding Status</FormLabel>
         <FormDescription>
-          How are you funding your product's progress?
+          How are you funding your product&apos;s progress?
         </FormDescription>
         <div className="space-y-4">
           {FUNDING_OPTIONS.map((option) => (

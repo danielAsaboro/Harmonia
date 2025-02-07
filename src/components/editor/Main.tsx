@@ -159,6 +159,7 @@ export default function PlayGround({
     loadScheduledItem,
     editorState.selectedDraftId,
     editorState.selectedItemStatus,
+    refreshSidebar,
   ]);
 
   // Add effect to manage threadId
@@ -218,7 +219,7 @@ export default function PlayGround({
         console.error("Error saving tweets:", error);
       }
     }
-  }, [tweets, isThread, threadId, isLoading, contentChanged]);
+  }, [tweets, isThread, threadId, isLoading, contentChanged, refreshSidebar, ]);
 
   useEffect(() => {
     const handleSwitchDraft = (e: CustomEvent) => {

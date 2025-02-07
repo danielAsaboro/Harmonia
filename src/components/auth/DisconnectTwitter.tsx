@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Twitter, Check, X } from "lucide-react";
 import { useUserAccount } from "@/components/editor/context/account";
+import Image from "next/image"
 
 interface DisconnectTwitterProps {
   onDisconnectSuccess?: () => void;
@@ -54,7 +55,7 @@ export function DisconnectTwitter({
     <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg border border-gray-700">
       <div className="flex items-center space-x-4">
         {profileImageUrl ? (
-          <img
+          <Image
             src={profileImageUrl}
             alt={name}
             className="w-12 h-12 rounded-full border-2 border-blue-500"

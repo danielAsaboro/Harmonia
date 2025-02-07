@@ -1,5 +1,6 @@
 // src/components/editor/media/MediaPreview.tsx
 import React, { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 
 interface Props {
   mediaIds: string[];
@@ -92,7 +93,7 @@ export default function MediaPreview({
                 onClick={() => handleMediaClick(url, index)}
               >
                 {isImageUrl(url) ? (
-                  <img
+                  <Image
                     src={url}
                     alt={`Media ${index + 1}`}
                     className="w-full h-full object-cover"
@@ -133,7 +134,7 @@ export default function MediaPreview({
             onClick={(e) => e.stopPropagation()}
           >
             {isImageUrl(fullscreenMedia) ? (
-              <img
+              <Image
                 src={fullscreenMedia}
                 alt={`Fullscreen media ${currentFullscreenIndex + 1}`}
                 className="max-w-full max-h-[90vh] object-contain"

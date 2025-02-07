@@ -10,7 +10,6 @@ import {
   TrendingUp,
   CheckCircle,
   AlertCircle,
-  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 

@@ -15,6 +15,7 @@ import LoadingState from "@/components/editor/LoadingState";
 import { KeyboardProvider, useKeyboard } from "@/context/keyboard-context";
 import KeyboardShortcutsDialog from "@/components/keyboard/KeyboardShortcutsDialog";
 import SearchModal from "@/components/search/SearchModal";
+import Image from "next/image";
 
 function EditorSidebar() {
   const {
@@ -124,7 +125,7 @@ function EditorSidebar() {
           <div className="p-4 border-b border-gray-800">
             <div className="flex items-center justify-between">
               {profileImageUrl ? (
-                <img
+                <Image
                   src={profileImageUrl}
                   alt={name}
                   className="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
@@ -304,7 +305,7 @@ function WholeEditor({ children }: { children: React.ReactNode }) {
     if (showSearch && showShortcuts) {
       setShowShortcuts(false);
     }
-  }, [showSearch]);
+  });
 
   // Monitor showShortcuts changes
   // and close search if needed
@@ -312,7 +313,7 @@ function WholeEditor({ children }: { children: React.ReactNode }) {
     if (showShortcuts && showSearch) {
       setShowSearch(false);
     }
-  }, [showShortcuts]);
+  });
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -358,17 +359,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <UserAccountProvider>
-      <EditorProvider>
-        <KeyboardProvider>
-          {/* <AuthErrorHandler> */}
-          <React.Suspense fallback={<LoadingState />}>
-            <WholeEditor>{children}</WholeEditor>
-          </React.Suspense>
-          {/* </AuthErrorHandler> */}
-        </KeyboardProvider>
-      </EditorProvider>
-    </UserAccountProvider>
+    <KeyboardProvider>
+      <UserAccountProvider>
+        <EditorProvider>
+          <AuthErrorHandler>
+            <React.Suspense fallback={<LoadingState />}>
+              <WholeEditor>{children}</WholeEditor>
+            </React.Suspense>
+          </AuthErrorHandler>
+        </EditorProvider>
+      </UserAccountProvider>
+    </KeyboardProvider>
   );
 }
 

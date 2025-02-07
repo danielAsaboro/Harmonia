@@ -25,9 +25,10 @@ import {
 } from "lucide-react";
 import { useUserAccount } from "@/components/editor/context/account";
 import { DisconnectTwitter } from "@/components/auth/DisconnectTwitter";
+import Image from "next/image";
 
 export default function SettingsPage() {
-  const { handle, name, profileImageUrl, isLoading, error } = useUserAccount();
+  const { handle, name, profileImageUrl, } = useUserAccount();
   const [activeTab, setActiveTab] = useState("account");
 
   const AccountSection = () => (
@@ -40,7 +41,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center space-x-4">
             {profileImageUrl ? (
-              <img
+              <Image
                 src={profileImageUrl}
                 alt={name}
                 className="w-16 h-16 rounded-full border-2 border-primary"

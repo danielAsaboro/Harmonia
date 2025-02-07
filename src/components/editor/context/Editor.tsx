@@ -53,47 +53,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     setIsSidebarVisible((prev) => !prev);
   }, []);
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleTabSwitch = (e: CustomEvent<Tab>) => {
-      setActiveTab(e.detail);
-    };
-
-    const handleNewDraft = () => {
-      showEditor();
-    };
-
-    const handleScheduleDraft = () => {
-      // We'll implement this when we add scheduling functionality
-      window.dispatchEvent(new CustomEvent("openScheduler"));
-    };
-
-    const handlePublishDraft = () => {
-      // We'll implement this when we add publishing functionality
-      window.dispatchEvent(new CustomEvent("publishCurrent"));
-    };
-
-    window.addEventListener("switchTab", handleTabSwitch as EventListener);
-    window.addEventListener("newDraft", handleNewDraft);
-    window.addEventListener("scheduleDraft", handleScheduleDraft);
-    window.addEventListener("publishDraft", handlePublishDraft);
-
-    return () => {
-      window.removeEventListener("switchTab", handleTabSwitch as EventListener);
-      window.removeEventListener("newDraft", handleNewDraft);
-      window.removeEventListener("scheduleDraft", handleScheduleDraft);
-      window.removeEventListener("publishDraft", handlePublishDraft);
-    };
-  }, []);
-
-  useEffect(() => {
-    setEditorState({
-      isVisible: false,
-      selectedDraftId: null,
-      selectedDraftType: null,
-    });
-  }, [activeTab]);
-
   const showEditor = useCallback(
     (draftId?: string, type?: "tweet" | "thread") => {
       if (activeTab === "scheduled" || activeTab === "published") {
@@ -246,6 +205,47 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const refreshSidebar = useCallback(() => {
     setRefreshCounter((prev) => prev + 1);
   }, []);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleTabSwitch = (e: CustomEvent<Tab>) => {
+      setActiveTab(e.detail);
+    };
+
+    const handleNewDraft = () => {
+      showEditor();
+    };
+
+    const handleScheduleDraft = () => {
+      // We'll implement this when we add scheduling functionality
+      window.dispatchEvent(new CustomEvent("openScheduler"));
+    };
+
+    const handlePublishDraft = () => {
+      // We'll implement this when we add publishing functionality
+      window.dispatchEvent(new CustomEvent("publishCurrent"));
+    };
+
+    window.addEventListener("switchTab", handleTabSwitch as EventListener);
+    window.addEventListener("newDraft", handleNewDraft);
+    window.addEventListener("scheduleDraft", handleScheduleDraft);
+    window.addEventListener("publishDraft", handlePublishDraft);
+
+    return () => {
+      window.removeEventListener("switchTab", handleTabSwitch as EventListener);
+      window.removeEventListener("newDraft", handleNewDraft);
+      window.removeEventListener("scheduleDraft", handleScheduleDraft);
+      window.removeEventListener("publishDraft", handlePublishDraft);
+    };
+  }, [showEditor]);
+
+  useEffect(() => {
+    setEditorState({
+      isVisible: false,
+      selectedDraftId: null,
+      selectedDraftType: null,
+    });
+  }, [activeTab]);
 
   return (
     <EditorContext.Provider

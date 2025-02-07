@@ -113,7 +113,7 @@ export default function CalendarView({
       const view = e.detail as "month" | "week";
       setViewType(view);
     };
-  
+
     const handleNavigation = (e: CustomEvent) => {
       const direction = e.detail as "prev" | "next";
       if (direction === "prev") {
@@ -122,21 +122,27 @@ export default function CalendarView({
         handleNext();
       }
     };
-  
+
     const handleToday = () => {
       setCurrentDate(new Date());
     };
-  
+
     window.addEventListener("calendarView", handleViewChange as EventListener);
     window.addEventListener("calendarNav", handleNavigation as EventListener);
     window.addEventListener("calendarToday", handleToday);
-  
+
     return () => {
-      window.removeEventListener("calendarView", handleViewChange as EventListener);
-      window.removeEventListener("calendarNav", handleNavigation as EventListener);
+      window.removeEventListener(
+        "calendarView",
+        handleViewChange as EventListener
+      );
+      window.removeEventListener(
+        "calendarNav",
+        handleNavigation as EventListener
+      );
       window.removeEventListener("calendarToday", handleToday);
     };
-  }, []);
+  });
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-gray-100">

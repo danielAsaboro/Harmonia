@@ -246,7 +246,7 @@ const MentionInput: React.FC = () => {
           placeholder="Type @ to mention someone..."
           className="w-full p-4 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 absolute top-0 left-0 right-0 bottom-0 bg-transparent"
           rows={3}
-          aria-expanded={showSuggestions}
+          // aria-expanded={showSuggestions}
           aria-haspopup="listbox"
           aria-controls="mentions-listbox"
         />

@@ -68,8 +68,20 @@ export class TweetStorageService {
   // USER DETAILS
   getUserDetails(): TwitterUserDetails | null {
     try {
+      console.log("trying to fetch user details");
       const details = localStorage.getItem(this.USER_DETAILS_KEY);
-      return details ? JSON.parse(details) : null;
+
+      // Parse details and check if it's a valid, non-empty object
+      if (details) {
+        const parsedDetails = JSON.parse(details);
+        if (parsedDetails && Object.keys(parsedDetails).length > 0) {
+          console.log("what i got ", parsedDetails);
+          return parsedDetails;
+        }
+      }
+
+      console.log("No user details found");
+      return null;
     } catch (error) {
       console.error("Error getting user details:", error);
       return null;
@@ -78,6 +90,7 @@ export class TweetStorageService {
 
   saveUserDetails(details: TwitterUserDetails) {
     try {
+      console.log("trying to save user details", details);
       localStorage.setItem(this.USER_DETAILS_KEY, JSON.stringify(details));
     } catch (error) {
       console.error("Error saving user details:", error);
