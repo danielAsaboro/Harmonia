@@ -15,13 +15,24 @@ export async function GET(request: NextRequest) {
     // todo
     const client = await getTwitterClient(tokens, request);
     const { data: userObject } = await client.v2.me({
-      "user.fields": ["name", "username", "profile_image_url"],
+      "user.fields": [
+        "name",
+        "username",
+        "profile_image_url",
+        "verified",
+        "verified_type",
+      ],
     });
 
+    console.log("got user id, fr ", userObject.id);
+
     return NextResponse.json({
+      id: userObject.id,
       name: userObject.name,
       username: userObject.username,
       profile_image_url: userObject.profile_image_url,
+      verified: userObject.verified,
+      verified_type: userObject.verified_type,
     });
   } catch (error) {
     console.error("Error fetching user data:", error);

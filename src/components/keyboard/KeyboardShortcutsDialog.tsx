@@ -1,5 +1,3 @@
-// /components/keyboard/KeyboardShortcutsDialog.tsx
-
 import React from "react";
 import { Command } from "lucide-react";
 
@@ -36,23 +34,37 @@ export default function KeyboardShortcutsDialog({
   if (!isOpen) return null;
 
   const shortcuts = [
-    { keys: ["⌘/Ctrl", "F"], description: "Search content" },
-    { keys: ["⌘/Ctrl", "1"], description: "Switch to Drafts" },
-    { keys: ["⌘/Ctrl", "2"], description: "Switch to Scheduled" },
-    { keys: ["⌘/Ctrl", "3"], description: "Switch to Published" },
+    // Editor Shortcuts
     { keys: ["⌘/Ctrl", "N"], description: "Create new draft" },
     { keys: ["⌘/Ctrl", "S"], description: "Schedule current draft" },
     { keys: ["⌘/Ctrl", "P"], description: "Publish current draft" },
+    { keys: ["⌘/Ctrl", "⇧", "F"], description: "Toggle focus mode" },
+    { keys: ["⌘/Ctrl", "⌥", "↑"], description: "Previous draft" },
+    { keys: ["⌘/Ctrl", "⌥", "↓"], description: "Next draft" },
+    { keys: ["⌘/Ctrl", "1"], description: "Switch to Drafts" },
+    { keys: ["⌘/Ctrl", "2"], description: "Switch to Scheduled" },
+    { keys: ["⌘/Ctrl", "3"], description: "Switch to Published" },
+
+    // Calendar Shortcuts
+    { keys: ["M"], description: "Switch to Month view" },
+    { keys: ["W"], description: "Switch to Week view" },
+    { keys: ["T"], description: "Go to Today" },
+    { keys: ["←"], description: "Previous week/month" },
+    { keys: ["→"], description: "Next week/month" },
+
+    // Global Shortcuts
+    { keys: ["⌘/Ctrl", "F"], description: "Search content" },
+    { keys: ["⌘/Ctrl", "K"], description: "Show shortcuts" },
     { keys: ["Esc"], description: "Close dialogs" },
   ];
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 rounded-xl shadow-xl max-w-lg w-full mx-4 p-6"
+        className="bg-gray-900 rounded-xl shadow-xl max-w-lg w-full mx-4 p-6 max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 mb-6">

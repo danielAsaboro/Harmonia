@@ -2,11 +2,15 @@
 "use client";
 import { createContext, useContext, useState, useEffect, JSX } from "react";
 import { User, UserSquare2, Loader2 } from "lucide-react";
+import { tweetStorage } from "@/utils/localStorage";
 
 interface UserAccountType {
+  id: string;
   name: string;
   handle: string;
   profileImageUrl: string;
+  verified: boolean;
+  verifiedType: string | null;
   isLoading: boolean;
   error?: string;
   reloadUserData?: () => void;
@@ -46,14 +50,32 @@ export function UserAccountProvider({
   const [userAccount, setUserAccount] = useState<
     Omit<UserAccountType, "getAvatar">
   >({
-    name: "Loading...",
-    handle: "@...",
+    id: "",
+    name: "",
+    handle: "",
     profileImageUrl: "",
+    verified: false,
+    verifiedType: null,
     isLoading: true,
   });
 
   const fetchUserData = async () => {
     try {
+      // First check localStorage
+      const cachedDetails = tweetStorage.getUserDetails();
+      if (cachedDetails) {
+        setUserAccount({
+          id: cachedDetails.id,
+          name: cachedDetails.name,
+          handle: `@${cachedDetails.handle}`,
+          profileImageUrl: cachedDetails.profileImageUrl,
+          verified: cachedDetails.verified,
+          verifiedType: cachedDetails.verifiedType,
+          isLoading: false,
+        });
+        return;
+      }
+
       const response = await fetch("/api/auth/twitter/user");
       if (!response.ok) {
         throw new Error("Failed to get user data");
@@ -61,10 +83,21 @@ export function UserAccountProvider({
 
       const userData = await response.json();
 
-      setUserAccount({
+      const userDetails = {
+        id: userData.id,
         name: userData.name,
-        handle: `@${userData.username}`,
+        handle: userData.username,
         profileImageUrl: userData.profile_image_url,
+        verified: userData.verified,
+        verifiedType: userData.verified_type,
+      };
+
+      // Save to localStorage
+      tweetStorage.saveUserDetails(userDetails);
+
+      setUserAccount({
+        ...userDetails,
+        handle: `@${userDetails.handle}`,
         isLoading: false,
       });
     } catch (error) {

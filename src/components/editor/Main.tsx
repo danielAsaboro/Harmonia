@@ -21,6 +21,7 @@ import {
 import SchedulePicker from "../scheduler/SchedulePicker";
 import { cn } from "@/utils/ts-merge";
 import PublishingModal from "./PublishingModal";
+import { useKeyboard } from "@/context/keyboard-context";
 
 //  helper function
 const repurposeTweet = (tweet: Tweet): Tweet => {
@@ -99,6 +100,7 @@ export default function PlayGround({
     "publishing" | "success" | "error" | null
   >(null);
   const [publishingError, setPublishingError] = useState<string | null>(null);
+  const { isFocusMode } = useKeyboard();
 
   // // Initialize editor with proper state
   useEffect(() => {
@@ -218,6 +220,33 @@ export default function PlayGround({
     }
   }, [tweets, isThread, threadId, isLoading, contentChanged]);
 
+  useEffect(() => {
+    const handleSwitchDraft = (e: CustomEvent) => {
+      const direction = e.detail as "prev" | "next";
+      if (!tweets.length) return;
+
+      const currentIndex = currentlyEditedTweet;
+      let newIndex;
+
+      if (direction === "prev") {
+        newIndex = currentIndex > 0 ? currentIndex - 1 : tweets.length - 1;
+      } else {
+        newIndex = currentIndex < tweets.length - 1 ? currentIndex + 1 : 0;
+      }
+
+      setCurrentlyEditedTweet(newIndex);
+      textareaRefs.current[newIndex]?.focus();
+    };
+
+    window.addEventListener("switchDraft", handleSwitchDraft as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        "switchDraft",
+        handleSwitchDraft as EventListener
+      );
+    };
+  }, [currentlyEditedTweet, tweets.length]);
   // Clean up when component unmounts
   useEffect(() => {
     return () => setTweets([]);
@@ -697,7 +726,9 @@ export default function PlayGround({
   }));
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div
+      className={cn("w-full max-w-2xl mx-auto", isFocusMode && "focus-mode")}
+    >
       {/* Header Controls */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">

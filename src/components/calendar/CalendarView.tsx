@@ -1,5 +1,5 @@
 // /components/calendar/CalendarView.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Settings,
@@ -107,6 +107,36 @@ export default function CalendarView({
   const handleToday = () => {
     setCurrentDate(new Date());
   };
+
+  useEffect(() => {
+    const handleViewChange = (e: CustomEvent) => {
+      const view = e.detail as "month" | "week";
+      setViewType(view);
+    };
+  
+    const handleNavigation = (e: CustomEvent) => {
+      const direction = e.detail as "prev" | "next";
+      if (direction === "prev") {
+        handlePrevious();
+      } else {
+        handleNext();
+      }
+    };
+  
+    const handleToday = () => {
+      setCurrentDate(new Date());
+    };
+  
+    window.addEventListener("calendarView", handleViewChange as EventListener);
+    window.addEventListener("calendarNav", handleNavigation as EventListener);
+    window.addEventListener("calendarToday", handleToday);
+  
+    return () => {
+      window.removeEventListener("calendarView", handleViewChange as EventListener);
+      window.removeEventListener("calendarNav", handleNavigation as EventListener);
+      window.removeEventListener("calendarToday", handleToday);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-gray-100">

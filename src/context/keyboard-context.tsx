@@ -11,6 +11,8 @@ interface KeyboardContextType {
   setShowSearch: (show: boolean) => void;
   showShortcuts: boolean;
   setShowShortcuts: (show: boolean) => void;
+  isFocusMode: boolean;
+  setIsFocusMode: (show: boolean) => void;
 }
 
 const KeyboardContext = createContext<KeyboardContextType | undefined>(
@@ -28,6 +30,7 @@ interface KeyboardShortcut {
 export function KeyboardProvider({ children }: { children: React.ReactNode }) {
   const [showSearch, setShowSearch] = React.useState(false);
   const [showShortcuts, setShowShortcuts] = React.useState(false);
+  const [isFocusMode, setIsFocusMode] = React.useState(false);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Show keyboard shortcuts (Cmd/Ctrl + K)
@@ -57,7 +60,36 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
-    // Content management shortcuts
+    // Calendar view shortcuts
+    if (!e.metaKey && !e.ctrlKey) {
+      switch (e.key.toLowerCase()) {
+        case "m":
+          window.dispatchEvent(
+            new CustomEvent("calendarView", { detail: "month" })
+          );
+          break;
+        case "w":
+          window.dispatchEvent(
+            new CustomEvent("calendarView", { detail: "week" })
+          );
+          break;
+        case "t":
+          window.dispatchEvent(new CustomEvent("calendarToday"));
+          break;
+        case "arrowleft":
+          window.dispatchEvent(
+            new CustomEvent("calendarNav", { detail: "prev" })
+          );
+          break;
+        case "arrowright":
+          window.dispatchEvent(
+            new CustomEvent("calendarNav", { detail: "next" })
+          );
+          break;
+      }
+    }
+
+    // Editor shortcuts
     if (e.metaKey || e.ctrlKey) {
       switch (e.key) {
         case "n": // New draft
@@ -71,6 +103,30 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
         case "p": // Publish current draft
           e.preventDefault();
           window.dispatchEvent(new CustomEvent("publishDraft"));
+          break;
+        case "F": // Focus mode (Cmd + Shift + F)
+          if (e.shiftKey) {
+            e.preventDefault();
+            setIsFocusMode((prev) => !prev);
+          }
+          break;
+      }
+    }
+
+    // Draft switching (Cmd + Option + Arrow)
+    if (e.metaKey && e.altKey) {
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("switchDraft", { detail: "prev" })
+          );
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("switchDraft", { detail: "next" })
+          );
           break;
       }
     }
@@ -88,6 +144,8 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
         setShowSearch,
         showShortcuts,
         setShowShortcuts,
+        isFocusMode,
+        setIsFocusMode,
       }}
     >
       {children}

@@ -2,6 +2,15 @@
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { debounce } from "lodash";
 
+interface TwitterUserDetails {
+  id: string;
+  name: string;
+  handle: string;
+  profileImageUrl: string;
+  verified: boolean;
+  verifiedType: string | null;
+}
+
 /**
  * Service for managing tweet and thread storage in localStorage.
  * Implements singleton pattern to ensure a single instance across the application.
@@ -17,6 +26,8 @@ export class TweetStorageService {
   private saveQueue: Set<string> = new Set();
   /** Timestamp of the last save operation */
   private lastSave: number = Date.now();
+
+  private readonly USER_DETAILS_KEY = "twitter_user_details";
 
   private constructor() {
     // Private constructor for singleton pattern
@@ -53,6 +64,25 @@ export class TweetStorageService {
     localStorage.setItem(this.TWEETS_KEY, JSON.stringify(updatedTweets));
     this.lastSave = Date.now();
   }, 1000);
+
+  // USER DETAILS
+  getUserDetails(): TwitterUserDetails | null {
+    try {
+      const details = localStorage.getItem(this.USER_DETAILS_KEY);
+      return details ? JSON.parse(details) : null;
+    } catch (error) {
+      console.error("Error getting user details:", error);
+      return null;
+    }
+  }
+
+  saveUserDetails(details: TwitterUserDetails) {
+    try {
+      localStorage.setItem(this.USER_DETAILS_KEY, JSON.stringify(details));
+    } catch (error) {
+      console.error("Error saving user details:", error);
+    }
+  }
 
   /**
    * Retrieves all tweets from localStorage
@@ -172,7 +202,10 @@ export class TweetStorageService {
       localStorage.setItem(this.THREADS_KEY, JSON.stringify(threads));
 
       tweets.forEach((tweet) => {
-        this.saveTweet({ ...tweet, threadId: thread.id, status: tweet.status }, immediate);
+        this.saveTweet(
+          { ...tweet, threadId: thread.id, status: tweet.status },
+          immediate
+        );
       });
     } catch (error) {
       console.error("Error saving thread:", error);
@@ -207,7 +240,7 @@ export class TweetStorageService {
       console.error("Error deleting thread:", error);
     }
   }
-  
+
   deleteTweetFromThread(tweetId: string) {
     try {
       // Get all tweets
