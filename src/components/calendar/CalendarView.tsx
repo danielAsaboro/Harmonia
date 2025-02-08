@@ -144,6 +144,34 @@ export default function CalendarView({
     };
   });
 
+  // Add to CalendarView useEffect
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) {
+        switch (e.key.toLowerCase()) {
+          case "t":
+            handleToday();
+            break;
+          case "m":
+            handleViewChange("month");
+            break;
+          case "w":
+            handleViewChange("week");
+            break;
+          case "arrowleft":
+            handlePrevious();
+            break;
+          case "arrowright":
+            handleNext();
+            break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleViewChange, handleToday, handlePrevious, handleNext]);
+
   return (
     <div className="flex flex-col h-full bg-gray-900 text-gray-100">
       {/* Header */}

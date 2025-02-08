@@ -102,157 +102,6 @@ export default function PlayGround({
   const [publishingError, setPublishingError] = useState<string | null>(null);
   const { isFocusMode } = useKeyboard();
 
-  // // Initialize editor with proper state
-  useEffect(() => {
-    const initializeEditor = async () => {
-      if (draftId) {
-        const isScheduled =
-          editorState.selectedItemStatus === "scheduled" ||
-          editorState.selectedItemStatus === "published";
-        const content = isScheduled ? loadScheduledItem() : loadDraft();
-
-        if (content) {
-          // Reset thread state before setting new content
-          setIsThread(false);
-
-          if ("tweets" in content) {
-            setIsThread(true);
-            setTweets(
-              content.tweets.map((tweet) => ({
-                ...tweet,
-                status: content.status,
-                scheduledFor: content.scheduledFor,
-              }))
-            );
-            setThreadId(content.id);
-          } else {
-            setTweets([content as Tweet]);
-            setThreadId(null);
-          }
-        }
-      } else {
-        // Only create new tweets in draft mode
-        if (activeTab === "drafts") {
-          setIsThread(false);
-          setThreadId(null);
-          const newTweet: Tweet = {
-            id: `tweet-${uuidv4()}`,
-            content: "",
-            media: [],
-            createdAt: new Date(),
-            status: "draft",
-          };
-          setTweets([newTweet]);
-          tweetStorage.saveTweet(newTweet, true);
-          refreshSidebar();
-        }
-      }
-      setIsLoading(false);
-    };
-
-    initializeEditor();
-  }, [
-    draftId,
-    draftType,
-    loadDraft,
-    activeTab,
-    loadScheduledItem,
-    editorState.selectedDraftId,
-    editorState.selectedItemStatus,
-    refreshSidebar,
-  ]);
-
-  // Add effect to manage threadId
-  useEffect(() => {
-    // If it's a thread draft, use its existing threadId
-    if (draftType === "thread" && draftId) {
-      const thread = tweetStorage.getThreads().find((t) => t.id === draftId);
-      setThreadId(thread?.id || `thread-${uuidv4()}`);
-    }
-    // For new tweets or single tweets, set threadId to null
-    else {
-      setThreadId(null);
-    }
-  }, [draftId, draftType]);
-
-  useEffect(() => {
-    if (!isLoading && tweets.length > 0 && contentChanged) {
-      // Only run if content changed
-      setSaveState((prev) => ({
-        ...prev,
-        isProcessing: true,
-        pendingOperations: prev.pendingOperations + 1,
-        lastSaveAttempt: new Date(),
-      }));
-
-      try {
-        if (isThread && threadId) {
-          const firstTweet = tweets[0];
-          const thread: Thread = {
-            id: threadId,
-            tweetIds: tweets.map((t) => t.id),
-            createdAt: firstTweet.createdAt,
-            status: firstTweet.status,
-            scheduledFor: firstTweet.scheduledFor,
-          };
-          tweetStorage.saveThread(thread, tweets);
-        } else {
-          tweetStorage.saveTweet(tweets[0]);
-        }
-
-        setSaveState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          pendingOperations: Math.max(0, prev.pendingOperations - 1),
-          lastSuccessfulSave: new Date(),
-          errorCount: 0,
-        }));
-        refreshSidebar();
-        setContentChanged(false); // Reset the flag after successful save
-      } catch (error) {
-        setSaveState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          errorCount: prev.errorCount + 1,
-          pendingOperations: Math.max(0, prev.pendingOperations - 1),
-        }));
-        console.error("Error saving tweets:", error);
-      }
-    }
-  }, [tweets, isThread, threadId, isLoading, contentChanged, refreshSidebar]);
-
-  useEffect(() => {
-    const handleSwitchDraft = (e: CustomEvent) => {
-      const direction = e.detail as "prev" | "next";
-      if (!tweets.length) return;
-
-      const currentIndex = currentlyEditedTweet;
-      let newIndex;
-
-      if (direction === "prev") {
-        newIndex = currentIndex > 0 ? currentIndex - 1 : tweets.length - 1;
-      } else {
-        newIndex = currentIndex < tweets.length - 1 ? currentIndex + 1 : 0;
-      }
-
-      setCurrentlyEditedTweet(newIndex);
-      textareaRefs.current[newIndex]?.focus();
-    };
-
-    window.addEventListener("switchDraft", handleSwitchDraft as EventListener);
-
-    return () => {
-      window.removeEventListener(
-        "switchDraft",
-        handleSwitchDraft as EventListener
-      );
-    };
-  }, [currentlyEditedTweet, tweets.length]);
-  // Clean up when component unmounts
-  useEffect(() => {
-    return () => setTweets([]);
-  }, []);
-
   const validateTweets = (): boolean => {
     const MAX_CHARS = 280;
     const invalidTweets = tweets.filter(
@@ -665,44 +514,6 @@ export default function PlayGround({
     }
   };
 
-  // const handleSchedulePost = (scheduledDate: Date) => {
-  //   if (!validateTweets()) return;
-  //   try {
-  //     // Convert tweets to scheduled status
-  //     const updatedTweets = tweets.map((tweet) => ({
-  //       ...tweet,
-  //       status: "scheduled" as const,
-  //       scheduledFor: scheduledDate,
-  //     }));
-
-  //     if (isThread && threadId) {
-  //       // Handle thread scheduling
-  //       const thread: Thread = {
-  //         id: threadId,
-  //         tweetIds: updatedTweets.map((t) => t.id),
-  //         createdAt: updatedTweets[updatedTweets.length - 1].createdAt,
-  //         status: "scheduled",
-  //         scheduledFor: scheduledDate,
-  //       };
-
-  //       // Save the thread and its tweets
-  //       tweetStorage.saveThread(thread, updatedTweets, true);
-  //     } else {
-  //       // Handle single tweet scheduling
-  //       tweetStorage.saveTweet(updatedTweets[0], true);
-  //     }
-
-  //     // Close the scheduler and editor
-  //     setShowScheduler(false);
-  //     hideEditor();
-
-  //     // Refresh the sidebar to show the new scheduled post
-  //     refreshSidebar();
-  //   } catch (error) {
-  //     console.error("Error scheduling post:", error);
-  //   }
-  // };
-
   const isValidToPublish = validateTweetsLength();
 
   const handlePublish = async () => {
@@ -830,6 +641,198 @@ export default function PlayGround({
     setActiveTab("drafts");
     refreshSidebar();
   };
+
+  // // Initialize editor with proper state
+  useEffect(() => {
+    const initializeEditor = async () => {
+      if (draftId) {
+        const isScheduled =
+          editorState.selectedItemStatus === "scheduled" ||
+          editorState.selectedItemStatus === "published";
+        const content = isScheduled ? loadScheduledItem() : loadDraft();
+
+        if (content) {
+          // Reset thread state before setting new content
+          setIsThread(false);
+
+          if ("tweets" in content) {
+            setIsThread(true);
+            setTweets(
+              content.tweets.map((tweet) => ({
+                ...tweet,
+                status: content.status,
+                scheduledFor: content.scheduledFor,
+              }))
+            );
+            setThreadId(content.id);
+          } else {
+            setTweets([content as Tweet]);
+            setThreadId(null);
+          }
+        }
+      } else {
+        // Only create new tweets in draft mode
+        if (activeTab === "drafts") {
+          setIsThread(false);
+          setThreadId(null);
+          const newTweet: Tweet = {
+            id: `tweet-${uuidv4()}`,
+            content: "",
+            media: [],
+            createdAt: new Date(),
+            status: "draft",
+          };
+          setTweets([newTweet]);
+          tweetStorage.saveTweet(newTweet, true);
+          refreshSidebar();
+        }
+      }
+      setIsLoading(false);
+    };
+
+    initializeEditor();
+  }, [
+    draftId,
+    draftType,
+    loadDraft,
+    activeTab,
+    loadScheduledItem,
+    editorState.selectedDraftId,
+    editorState.selectedItemStatus,
+    refreshSidebar,
+  ]);
+
+  // Add effect to manage threadId
+  useEffect(() => {
+    // If it's a thread draft, use its existing threadId
+    if (draftType === "thread" && draftId) {
+      const thread = tweetStorage.getThreads().find((t) => t.id === draftId);
+      setThreadId(thread?.id || `thread-${uuidv4()}`);
+    }
+    // For new tweets or single tweets, set threadId to null
+    else {
+      setThreadId(null);
+    }
+  }, [draftId, draftType]);
+
+  useEffect(() => {
+    if (!isLoading && tweets.length > 0 && contentChanged) {
+      // Only run if content changed
+      setSaveState((prev) => ({
+        ...prev,
+        isProcessing: true,
+        pendingOperations: prev.pendingOperations + 1,
+        lastSaveAttempt: new Date(),
+      }));
+
+      try {
+        if (isThread && threadId) {
+          const firstTweet = tweets[0];
+          const thread: Thread = {
+            id: threadId,
+            tweetIds: tweets.map((t) => t.id),
+            createdAt: firstTweet.createdAt,
+            status: firstTweet.status,
+            scheduledFor: firstTweet.scheduledFor,
+          };
+          tweetStorage.saveThread(thread, tweets);
+        } else {
+          tweetStorage.saveTweet(tweets[0]);
+        }
+
+        setSaveState((prev) => ({
+          ...prev,
+          isProcessing: false,
+          pendingOperations: Math.max(0, prev.pendingOperations - 1),
+          lastSuccessfulSave: new Date(),
+          errorCount: 0,
+        }));
+        refreshSidebar();
+        setContentChanged(false); // Reset the flag after successful save
+      } catch (error) {
+        setSaveState((prev) => ({
+          ...prev,
+          isProcessing: false,
+          errorCount: prev.errorCount + 1,
+          pendingOperations: Math.max(0, prev.pendingOperations - 1),
+        }));
+        console.error("Error saving tweets:", error);
+      }
+    }
+  }, [tweets, isThread, threadId, isLoading, contentChanged, refreshSidebar]);
+
+  useEffect(() => {
+    const handleSwitchDraft = (e: CustomEvent) => {
+      const direction = e.detail as "prev" | "next";
+      if (!tweets.length) return;
+
+      const currentIndex = currentlyEditedTweet;
+      let newIndex;
+
+      if (direction === "prev") {
+        newIndex = currentIndex > 0 ? currentIndex - 1 : tweets.length - 1;
+      } else {
+        newIndex = currentIndex < tweets.length - 1 ? currentIndex + 1 : 0;
+      }
+
+      setCurrentlyEditedTweet(newIndex);
+      textareaRefs.current[newIndex]?.focus();
+    };
+
+    window.addEventListener("switchDraft", handleSwitchDraft as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        "switchDraft",
+        handleSwitchDraft as EventListener
+      );
+    };
+  }, [currentlyEditedTweet, tweets.length]);
+  // Clean up when component unmounts
+
+  useEffect(() => {
+    return () => setTweets([]);
+  }, []);
+
+  // keyboard shortcuts
+  useEffect(() => {
+    const handlePublish = () => {
+      if (isValidToPublish) {
+        handlePublish();
+      }
+    };
+
+    const handleSchedule = () => {
+      if (isValidToPublish) {
+        setShowScheduler(true);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        switch (e.key) {
+          case "s":
+            e.preventDefault();
+            handleSchedule();
+            break;
+          case "p":
+            e.preventDefault();
+            handlePublish();
+            break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("publishDraft", handlePublish);
+    window.addEventListener("scheduleDraft", handleSchedule);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("publishDraft", handlePublish);
+      window.removeEventListener("scheduleDraft", handleSchedule);
+    };
+  }, [isValidToPublish, handlePublish]);
 
   if (isLoading) {
     return (
