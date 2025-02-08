@@ -100,7 +100,6 @@ export default function PlayGround({
     "publishing" | "success" | "error" | null
   >(null);
   const [publishingError, setPublishingError] = useState<string | null>(null);
-  const { isFocusMode } = useKeyboard();
 
   const validateTweets = (): boolean => {
     const MAX_CHARS = 280;
@@ -642,6 +641,12 @@ export default function PlayGround({
     refreshSidebar();
   };
 
+  // Ensure unique IDs before rendering
+  const tweetsWithUniqueIds = tweets.map((tweet, index) => ({
+    ...tweet,
+    id: tweet.id || `${uuidv4()}-${index}`, // Fallback ID includes index for uniqueness
+  }));
+
   // // Initialize editor with proper state
   useEffect(() => {
     const initializeEditor = async () => {
@@ -795,6 +800,7 @@ export default function PlayGround({
   }, []);
 
   // keyboard shortcuts
+  // useEffect for publishing and scheduling
   useEffect(() => {
     const handlePublish = () => {
       if (isValidToPublish) {
@@ -834,6 +840,35 @@ export default function PlayGround({
     };
   }, [isValidToPublish, handlePublish]);
 
+  // useEffect for draft switching in thread
+  useEffect(() => {
+    const handleDraftSwitch = (e: KeyboardEvent) => {
+      if (e.metaKey && e.altKey) {
+        switch (e.key) {
+          case "ArrowUp":
+            e.preventDefault();
+            // Move to previous draft
+            if (currentlyEditedTweet > 0) {
+              setCurrentlyEditedTweet((prev) => prev - 1);
+              textareaRefs.current[currentlyEditedTweet - 1]?.focus();
+            }
+            break;
+          case "ArrowDown":
+            e.preventDefault();
+            // Move to next draft
+            if (currentlyEditedTweet < tweets.length - 1) {
+              setCurrentlyEditedTweet((prev) => prev + 1);
+              textareaRefs.current[currentlyEditedTweet + 1]?.focus();
+            }
+            break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleDraftSwitch);
+    return () => window.removeEventListener("keydown", handleDraftSwitch);
+  }, [currentlyEditedTweet, tweets.length]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -842,16 +877,8 @@ export default function PlayGround({
     );
   }
 
-  // Ensure unique IDs before rendering
-  const tweetsWithUniqueIds = tweets.map((tweet, index) => ({
-    ...tweet,
-    id: tweet.id || `${uuidv4()}-${index}`, // Fallback ID includes index for uniqueness
-  }));
-
   return (
-    <div
-      className={cn("w-full max-w-2xl mx-auto", isFocusMode && "focus-mode")}
-    >
+    <div className="w-full max-w-2xl mx-auto">
       {/* Header Controls */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">

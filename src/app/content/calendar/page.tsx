@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import CalendarView from "@/components/calendar/CalendarView";
 import { CalendarEvent, CalendarEventType } from "@/components/calendar/types";
 import { tweetStorage } from "@/utils/localStorage";
+import { KeyboardProvider } from "@/context/keyboard-context";
 
 export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -134,14 +135,16 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="h-screen bg-gray-900 text-gray-100">
-      <CalendarView
-        events={events}
-        onEventCreate={handleEventCreate}
-        onEventUpdate={handleEventUpdate}
-        onEventDrop={handleEventDrop}
-        onEventDelete={handleEventDelete}
-      />
-    </div>
+    <KeyboardProvider>
+      <div className="h-screen bg-gray-900 text-gray-100">
+        <CalendarView
+          events={events}
+          onEventCreate={handleEventCreate}
+          onEventUpdate={handleEventUpdate}
+          onEventDrop={handleEventDrop}
+          onEventDelete={handleEventDelete}
+        />
+      </div>
+    </KeyboardProvider>
   );
 }

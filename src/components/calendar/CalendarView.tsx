@@ -24,6 +24,8 @@ import MonthView from "./MonthView";
 import EventModal from "./EventModal";
 import { Button } from "../ui/button";
 import ConfirmDialog from "../editor/ConfirmDialog";
+import KeyboardShortcutsDialog from "@/components/keyboard/KeyboardShortcutsDialog";
+import { useKeyboard } from "@/context/keyboard-context";
 
 interface Props
   extends Omit<
@@ -47,6 +49,7 @@ export default function CalendarView({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showEventModal, setShowEventModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { showShortcuts, setShowShortcuts } = useKeyboard();
 
   const [selectedEvent, setSelectedEvent] = useState<
     CalendarEvent | undefined
@@ -318,6 +321,12 @@ export default function CalendarView({
           cancelLabel="Cancel"
         />
       </div>
+
+      {/* Keyboard Shortcut */}
+      <KeyboardShortcutsDialog
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 }

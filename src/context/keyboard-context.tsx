@@ -11,8 +11,6 @@ interface KeyboardContextType {
   setShowSearch: (show: boolean) => void;
   showShortcuts: boolean;
   setShowShortcuts: (show: boolean) => void;
-  isFocusMode: boolean;
-  setIsFocusMode: (show: boolean) => void;
 }
 
 const KeyboardContext = createContext<KeyboardContextType | undefined>(
@@ -30,7 +28,7 @@ interface KeyboardShortcut {
 export function KeyboardProvider({ children }: { children: React.ReactNode }) {
   const [showSearch, setShowSearch] = React.useState(false);
   const [showShortcuts, setShowShortcuts] = React.useState(false);
-  const [isFocusMode, setIsFocusMode] = React.useState(false);
+  // const [isFocusMode, setIsFocusMode] = React.useState(false);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Show keyboard shortcuts (Cmd/Ctrl + K)
@@ -41,9 +39,14 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Search shortcut (Cmd/Ctrl + F)
-    if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      !e.shiftKey &&
+      e.key.toLowerCase() === "f"
+    ) {
       e.preventDefault();
       setShowSearch(true);
+      return;
     }
 
     // Tab switching shortcuts
@@ -104,12 +107,6 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
           e.preventDefault();
           window.dispatchEvent(new CustomEvent("publishDraft"));
           break;
-        case "F": // Focus mode (Cmd + Shift + F)
-          if (e.shiftKey) {
-            e.preventDefault();
-            setIsFocusMode((prev) => !prev);
-          }
-          break;
       }
     }
 
@@ -130,6 +127,13 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
           break;
       }
     }
+
+    // Handle sidebar toggle (Cmd/Ctrl + Shift + F)
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("toggleSidebar"));
+      return;
+    }
   }, []);
 
   useEffect(() => {
@@ -144,8 +148,6 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
         setShowSearch,
         showShortcuts,
         setShowShortcuts,
-        isFocusMode,
-        setIsFocusMode,
       }}
     >
       {children}

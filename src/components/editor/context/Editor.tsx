@@ -247,6 +247,17 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     });
   }, [activeTab]);
 
+  // toggleSidebar to listen for keyboard event
+  useEffect(() => {
+    const handleToggleSidebar = () => {
+      setIsSidebarVisible((prev) => !prev);
+    };
+
+    window.addEventListener("toggleSidebar", handleToggleSidebar);
+    return () =>
+      window.removeEventListener("toggleSidebar", handleToggleSidebar);
+  }, []);
+
   return (
     <EditorContext.Provider
       value={{
