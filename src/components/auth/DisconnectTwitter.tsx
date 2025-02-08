@@ -39,7 +39,7 @@ export function DisconnectTwitter({
       // Success handling
       onDisconnectSuccess?.();
       // Optional: Trigger a full page reload or update user context
-      window.location.href = "/settings"; // or your preferred redirect
+      window.location.href = "/settings"; // a preferred redirect
     } catch (error) {
       console.error("Disconnect error:", error);
       setDisconnectError(

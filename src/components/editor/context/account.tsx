@@ -44,8 +44,6 @@ export function UserAccountProvider({
 
   console.log("number of times user endpoint called, ", count);
 
-  console.log("printing out cached details", tweetStorage.getUserDetails());
-
   // Error avatar component
   const ErrorAvatar = () => (
     <div className="w-12 h-12 rounded-full bg-red-900/20 border-2 border-red-500/20 flex items-center justify-center">

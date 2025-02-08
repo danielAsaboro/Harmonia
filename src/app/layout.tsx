@@ -4,6 +4,14 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { initializeServices } from "@/lib/init";
+
+if (typeof window === "undefined") {
+  // Only run on server side
+  console.log("initializing services");
+  initializeServices();
+}
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

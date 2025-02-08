@@ -219,7 +219,7 @@ export default function PlayGround({
         console.error("Error saving tweets:", error);
       }
     }
-  }, [tweets, isThread, threadId, isLoading, contentChanged, refreshSidebar, ]);
+  }, [tweets, isThread, threadId, isLoading, contentChanged, refreshSidebar]);
 
   useEffect(() => {
     const handleSwitchDraft = (e: CustomEvent) => {
@@ -547,31 +547,110 @@ export default function PlayGround({
     }, 0);
   };
 
-  const handleSchedulePost = (scheduledDate: Date) => {
+  const handleSchedulePost = async (scheduledDate: Date) => {
     if (!validateTweets()) return;
     try {
-      // Convert tweets to scheduled status
-      const updatedTweets = tweets.map((tweet) => ({
-        ...tweet,
-        status: "scheduled" as const,
-        scheduledFor: scheduledDate,
-      }));
+      // Get user session data first
+      const response = await fetch("/api/auth/twitter/user");
+      if (!response.ok) {
+        throw new Error("Failed to get user data");
+      }
+      const userData = await response.json();
+      const userId = userData.id;
 
+      // Save scheduled tweets to both localStorage and SQLite
       if (isThread && threadId) {
-        // Handle thread scheduling
+        // Prepare thread data for SQLite
+        const threadData = {
+          id: threadId,
+          tweetIds: tweets.map((t) => t.id),
+          scheduledFor: scheduledDate.toISOString(),
+          status: "scheduled" as const,
+          createdAt: new Date().toISOString(),
+          userId,
+        };
+
+        // Prepare tweets data for SQLite
+        const tweetsData = tweets.map((tweet) => ({
+          id: tweet.id,
+          content: tweet.content,
+          mediaIds: tweet.media || [],
+          scheduledFor: scheduledDate.toISOString(),
+          threadId: threadId,
+          position: tweet.position,
+          status: "scheduled" as const,
+          createdAt: new Date().toISOString(),
+          userId,
+        }));
+
+        // Save to SQLite via API
+        const scheduleResponse = await fetch("/api/scheduler/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "thread",
+            thread: threadData,
+            tweets: tweetsData,
+          }),
+        });
+
+        if (!scheduleResponse.ok) {
+          throw new Error("Failed to schedule thread");
+        }
+
+        // Save to localStorage for UI
         const thread: Thread = {
           id: threadId,
-          tweetIds: updatedTweets.map((t) => t.id),
-          createdAt: updatedTweets[updatedTweets.length - 1].createdAt,
+          tweetIds: tweets.map((t) => t.id),
+          createdAt: new Date(),
           status: "scheduled",
           scheduledFor: scheduledDate,
         };
 
-        // Save the thread and its tweets
-        tweetStorage.saveThread(thread, updatedTweets, true);
+        tweetStorage.saveThread(
+          thread,
+          tweets.map((t) => ({
+            ...t,
+            status: "scheduled" as const,
+            scheduledFor: scheduledDate,
+          })),
+          true
+        );
       } else {
-        // Handle single tweet scheduling
-        tweetStorage.saveTweet(updatedTweets[0], true);
+        // Prepare single tweet data for SQLite
+        const tweetData = {
+          id: tweets[0].id,
+          content: tweets[0].content,
+          mediaIds: tweets[0].media || [],
+          scheduledFor: scheduledDate.toISOString(),
+          status: "scheduled" as const,
+          createdAt: new Date().toISOString(),
+          userId,
+        };
+
+        // Save to SQLite via API
+        const scheduleResponse = await fetch("/api/scheduler/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "tweet",
+            tweet: tweetData,
+          }),
+        });
+
+        if (!scheduleResponse.ok) {
+          throw new Error("Failed to schedule tweet");
+        }
+
+        // Save to localStorage for UI
+        tweetStorage.saveTweet(
+          {
+            ...tweets[0],
+            status: "scheduled",
+            scheduledFor: scheduledDate,
+          },
+          true
+        );
       }
 
       // Close the scheduler and editor
@@ -582,8 +661,47 @@ export default function PlayGround({
       refreshSidebar();
     } catch (error) {
       console.error("Error scheduling post:", error);
+      alert("Failed to schedule post. Please try again.");
     }
   };
+
+  // const handleSchedulePost = (scheduledDate: Date) => {
+  //   if (!validateTweets()) return;
+  //   try {
+  //     // Convert tweets to scheduled status
+  //     const updatedTweets = tweets.map((tweet) => ({
+  //       ...tweet,
+  //       status: "scheduled" as const,
+  //       scheduledFor: scheduledDate,
+  //     }));
+
+  //     if (isThread && threadId) {
+  //       // Handle thread scheduling
+  //       const thread: Thread = {
+  //         id: threadId,
+  //         tweetIds: updatedTweets.map((t) => t.id),
+  //         createdAt: updatedTweets[updatedTweets.length - 1].createdAt,
+  //         status: "scheduled",
+  //         scheduledFor: scheduledDate,
+  //       };
+
+  //       // Save the thread and its tweets
+  //       tweetStorage.saveThread(thread, updatedTweets, true);
+  //     } else {
+  //       // Handle single tweet scheduling
+  //       tweetStorage.saveTweet(updatedTweets[0], true);
+  //     }
+
+  //     // Close the scheduler and editor
+  //     setShowScheduler(false);
+  //     hideEditor();
+
+  //     // Refresh the sidebar to show the new scheduled post
+  //     refreshSidebar();
+  //   } catch (error) {
+  //     console.error("Error scheduling post:", error);
+  //   }
+  // };
 
   const isValidToPublish = validateTweetsLength();
 
@@ -621,6 +739,7 @@ export default function PlayGround({
       });
 
       if (!response.ok) {
+        console.log(response.body);
         throw new Error("Failed to post to Twitter");
       }
 
@@ -744,6 +863,72 @@ export default function PlayGround({
         {/* Show different controls based on tab */}
 
         <div className="flex items-center gap-3">
+          {activeTab === "drafts" && (
+            <>
+              <SaveStatus saveState={saveState} />
+
+              <button
+                className={cn(
+                  "px-4 py-1.5 rounded-full flex items-center gap-2",
+                  "text-gray-400 hover:bg-gray-800",
+                  !isValidToPublish &&
+                    "opacity-50 cursor-not-allowed hover:bg-transparent"
+                )}
+                onClick={() => isValidToPublish && setShowScheduler(true)}
+                disabled={!isValidToPublish}
+                title={
+                  !isValidToPublish
+                    ? "Tweet content exceeds character limit"
+                    : undefined
+                }
+              >
+                <Clock size={18} />
+                Schedule
+              </button>
+
+              <button
+                onClick={handlePublish}
+                className={cn(
+                  "px-4 py-1.5 bg-blue-500 text-white rounded-full",
+                  "hover:bg-blue-600 flex items-center gap-2",
+                  !isValidToPublish &&
+                    "opacity-50 cursor-not-allowed hover:bg-blue-500"
+                )}
+                disabled={!isValidToPublish}
+                title={
+                  !isValidToPublish
+                    ? "Tweet content exceeds character limit"
+                    : undefined
+                }
+              >
+                <Send size={18} />
+                Publish
+              </button>
+            </>
+          )}
+
+          {activeTab === "scheduled" && (
+            <button
+              onClick={handlePublish}
+              className={cn(
+                "px-4 py-1.5 bg-blue-500 text-white rounded-full",
+                "hover:bg-blue-600 flex items-center gap-2",
+                !isValidToPublish &&
+                  "opacity-50 cursor-not-allowed hover:bg-blue-500"
+              )}
+              disabled={!isValidToPublish}
+              title={
+                !isValidToPublish
+                  ? "Tweet content exceeds character limit"
+                  : undefined
+              }
+            >
+              <Send size={18} />
+              Publish
+            </button>
+          )}
+        </div>
+        {/* <div className="flex items-center gap-3">
           {activeTab === "drafts" ? (
             <>
               <SaveStatus saveState={saveState} />
@@ -788,7 +973,7 @@ export default function PlayGround({
               Publish
             </button>
           ) : undefined}
-        </div>
+        </div> */}
       </div>
 
       <div className="bg-gray-900 rounded-lg">

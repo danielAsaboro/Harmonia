@@ -6,7 +6,7 @@ import { getTwitterClient } from "@/lib/twitter";
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession(request);
-    const tokens = session.get("twitter_tokens");
+    const tokens = session.get("twitter_session");
 
     if (!tokens) {
       return NextResponse.json(
@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
     // Revoke the access token (optional but recommended)
     try {
       const client = await getTwitterClient(tokens);
-      // await client.v2.revokeOAuth2Token();
       await client.revokeOAuth2Token(JSON.parse(tokens).accessToken);
       revokeAttempted = true;
       revokeSuccess = true;

@@ -12,8 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get auth tokens from session
     const session = await getSession(request);
-    const tokens = session.get("twitter_tokens");
-
+    const tokens = session.get("twitter_session");
     if (!tokens) {
       return NextResponse.json(
         { error: "Not authenticated with Twitter" },
