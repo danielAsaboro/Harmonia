@@ -2,27 +2,26 @@
 import cron from "node-cron";
 import { db } from "../db";
 import { publishTweet, publishThread } from "../twitter/publisher";
+import { logToFile, logError } from "../utils/logger";
 
 export function startScheduler() {
-  // Run every minute to check for tweets that need to be published
   cron.schedule("* * * * *", async () => {
     try {
       const now = new Date();
+      logToFile("Starting scheduled publication check");
 
-      // Get pending tweets and threads
       const pendingTweets = db.getPendingTweets(now);
       const pendingThreads = db.getPendingThreads(now);
 
       // Process standalone tweets
       for (const tweet of pendingTweets) {
         if (!tweet.threadId) {
-          // Only process standalone tweets here
           try {
             await publishTweet(tweet);
             db.updateTweetStatus(tweet.id, "published");
-          console.log("publish all current scheduled tweets successful")
+            logToFile(`Successfully published tweet ${tweet.id}`);
           } catch (error) {
-            console.error(`Failed to publish tweet ${tweet.id}:`, error);
+            logError(error, `Failed to publish tweet ${tweet.id}`);
             db.updateTweetStatus(
               tweet.id,
               "failed",
@@ -42,14 +41,15 @@ export function startScheduler() {
           await publishThread(thread, threadTweets);
           db.updateThreadStatus(thread.id, "published");
 
-          // Update status for all tweets in thread
           threadTweets.forEach((tweet) => {
             db.updateTweetStatus(tweet.id, "published");
           });
 
-          console.log("publish all current tweets in scheduled in thread successful")
+          logToFile(
+            `Successfully published thread ${thread.id} with ${threadTweets.length} tweets`
+          );
         } catch (error) {
-          console.error(`Failed to publish thread ${thread.id}:`, error);
+          logError(error, `Failed to publish thread ${thread.id}`);
           db.updateThreadStatus(
             thread.id,
             "failed",
@@ -57,8 +57,14 @@ export function startScheduler() {
           );
         }
       }
+
+      if (pendingTweets.length === 0 && pendingThreads.length === 0) {
+        logToFile("No pending publications found");
+      }
     } catch (error) {
-      console.error("Scheduler error:", error);
+      logError(error, "Scheduler error");
     }
   });
+
+  logToFile("Tweet scheduler started");
 }
