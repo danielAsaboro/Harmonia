@@ -44,6 +44,8 @@ export function UserAccountProvider({
 
   console.log("number of times user endpoint called, ", count);
 
+  console.log("printing out cached details", tweetStorage.getUserDetails());
+
   // Error avatar component
   const ErrorAvatar = () => (
     <div className="w-12 h-12 rounded-full bg-red-900/20 border-2 border-red-500/20 flex items-center justify-center">
@@ -75,6 +77,8 @@ export function UserAccountProvider({
       // First check localStorage
       const cachedDetails = tweetStorage.getUserDetails();
 
+      console.log("cached details gotten ", cachedDetails);
+
       if (cachedDetails) {
         setUserAccount({
           id: cachedDetails.id,
@@ -95,6 +99,8 @@ export function UserAccountProvider({
         }
 
         const userData = await response.json();
+
+        console.log("user info gottent ", userData);
 
         const userDetails = {
           id: userData.id,
@@ -124,9 +130,9 @@ export function UserAccountProvider({
     }
   }, []);
 
-  // useEffect(() => {
-  //   fetchUserData();
-  // }, []);
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
   useEffect(() => {
     const checkAndRefreshToken = async () => {
@@ -168,6 +174,8 @@ export function UserAccountProvider({
       <Image
         src={userAccount.profileImageUrl}
         alt={userAccount.name}
+        width={48}
+        height={48}
         className="w-12 h-12 rounded-full border-2 border-gray-700 hover:border-blue-500 transition-colors duration-200"
       />
     );

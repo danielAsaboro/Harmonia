@@ -1,23 +1,18 @@
-// /lib/twitter.ts
+// // /lib/twitter.ts
 import { TwitterApi } from "twitter-api-v2";
 import { getSession } from "./session";
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-interface TwitterTokens {
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt: number;
-}
 
 export async function getTwitterClient(
-  tokens: string,
+  sessionData: string,
   req?: NextRequest
 ): Promise<TwitterApi> {
   try {
-    const parsedTokens: TwitterTokens = JSON.parse(tokens);
+    const { tokens } = JSON.parse(sessionData) as TwitterSessionData;
 
     // Check if token needs refresh
-    if (Date.now() >= parsedTokens.expiresAt && parsedTokens.refreshToken) {
+    if (Date.now() >= tokens.expiresAt && tokens.refreshToken) {
       const client = new TwitterApi({
         clientId: process.env.TWITTER_CLIENT_ID!,
         clientSecret: process.env.TWITTER_CLIENT_SECRET!,
@@ -27,21 +22,43 @@ export async function getTwitterClient(
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
         expiresIn,
-      } = await client.refreshOAuth2Token(parsedTokens.refreshToken);
+      } = await client.refreshOAuth2Token(tokens.refreshToken);
 
-      // Update tokens
-      parsedTokens.accessToken = newAccessToken;
-      parsedTokens.refreshToken = newRefreshToken;
-      parsedTokens.expiresAt = Date.now() + expiresIn * 1000;
+      // Create updated session data
+      const updatedSessionData: TwitterSessionData = {
+        tokens: {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+          expiresAt: Date.now() + expiresIn * 1000,
+        },
+        userData: JSON.parse(sessionData).userData, // Preserve existing user data
+      };
 
       // Update session if request is provided
       if (req) {
         const session = await getSession(req);
-        await session.update("twitter_tokens", JSON.stringify(parsedTokens));
+        await session.update(
+          "twitter_session",
+          JSON.stringify(updatedSessionData)
+        );
+
+        // Create a response to update cookies
+        const response = new NextResponse();
+        response.cookies.set({
+          name: "twitter_session",
+          value: JSON.stringify(updatedSessionData),
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        });
       }
+
+      return new TwitterApi(newAccessToken);
     }
 
-    return new TwitterApi(parsedTokens.accessToken);
+    return new TwitterApi(tokens.accessToken);
   } catch (error) {
     console.error("Error getting Twitter client:", error);
     throw new Error("Failed to initialize Twitter client");

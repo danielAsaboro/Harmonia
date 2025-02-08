@@ -1,4 +1,5 @@
 // indexedDB.ts
+
 import { v4 as uuidv4 } from "uuid";
 
 // Check if we're in a browser environment
@@ -31,27 +32,63 @@ class MediaStorageService {
     }
 
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
+      // First, get the current version of the database
+      const checkRequest = indexedDB.open(this.dbName);
 
-      request.onerror = () => reject(request.error);
+      checkRequest.onsuccess = () => {
+        const currentVersion = checkRequest.result.version;
+        checkRequest.result.close();
 
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve(this.db);
+        // Open with a version higher than the current one
+        const request = indexedDB.open(this.dbName, currentVersion + 1);
+
+        request.onerror = () => reject(request.error);
+
+        request.onsuccess = () => {
+          this.db = request.result;
+          resolve(this.db);
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(this.storeName)) {
+            const store = db.createObjectStore(this.storeName, {
+              keyPath: "id",
+            });
+            store.createIndex("lastModified", "lastModified", {
+              unique: false,
+            });
+          }
+        };
       };
 
-      request.onupgradeneeded = (event) => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          const store = db.createObjectStore(this.storeName, {
-            keyPath: "id",
-          });
-          store.createIndex("lastModified", "lastModified", { unique: false });
-        }
+      checkRequest.onerror = () => {
+        // If the database doesn't exist yet, open it with version 1
+        const request = indexedDB.open(this.dbName, 1);
+
+        request.onerror = () => reject(request.error);
+
+        request.onsuccess = () => {
+          this.db = request.result;
+          resolve(this.db);
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(this.storeName)) {
+            const store = db.createObjectStore(this.storeName, {
+              keyPath: "id",
+            });
+            store.createIndex("lastModified", "lastModified", {
+              unique: false,
+            });
+          }
+        };
       };
     });
   }
 
+  // Rest of the class implementation remains the same...
   private async getDB(): Promise<IDBDatabase> {
     if (!isBrowser) {
       throw new Error("IndexedDB is not available in this environment");
@@ -63,7 +100,6 @@ class MediaStorageService {
 
   async storeMediaFile(file: File): Promise<string> {
     if (!isBrowser) {
-      // Fallback for server-side - generate a unique ID
       return Promise.resolve(uuidv4());
     }
 
@@ -96,7 +132,6 @@ class MediaStorageService {
 
   getMediaFile(mediaId: string): Promise<string | null> {
     if (!isBrowser) {
-      // Fallback for server-side
       return Promise.resolve(null);
     }
 
@@ -117,7 +152,6 @@ class MediaStorageService {
 
   removeMediaFile(mediaId: string): Promise<void> {
     if (!isBrowser) {
-      // Fallback for server-side
       return Promise.resolve();
     }
 
@@ -134,7 +168,6 @@ class MediaStorageService {
 
   async cleanupOldMedia(maxFiles = 50): Promise<void> {
     if (!isBrowser) {
-      // Fallback for server-side
       return Promise.resolve();
     }
 

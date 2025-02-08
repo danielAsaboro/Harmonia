@@ -8,12 +8,6 @@ const CLIENT_ID = process.env.TWITTER_CLIENT_ID!;
 const CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET!;
 const CALLBACK_URL = process.env.TWITTER_CALLBACK_URL!;
 
-interface TwitterTokens {
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt: number;
-}
-
 export async function GET(request: NextRequest) {
   console.log("🔍 Callback Route Hit");
   console.log("Full URL:", request.url);
@@ -22,24 +16,10 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get("state");
   const code = searchParams.get("code");
 
-  console.log("URL Parameters:", { state, code });
-
   const session = await getSession(request);
-
-  console.log(
-    "Session Methods Available:",
-    !!session.get,
-    !!session.set,
-    !!session.update
-  );
 
   const codeVerifier = session.get("codeVerifier");
   const sessionState = session.get("state");
-
-  console.log("Session Data:", {
-    codeVerifier: codeVerifier ? "PRESENT" : "MISSING",
-    sessionState: sessionState ? "PRESENT" : "MISSING",
-  });
 
   // Retrieve the return URL from cookies
   const returnUrl =
@@ -88,23 +68,43 @@ export async function GET(request: NextRequest) {
 
     console.log("🎉 OAuth Login Successful");
 
-    // Calculate absolute expiry time
-    const expiresAt = Date.now() + expiresIn * 1000;
+    // Fetch user data immediately after successful auth
+    const twitterClient = new TwitterApi(accessToken);
+    const { data: userObject } = await twitterClient.v2.me({
+      "user.fields": [
+        "name",
+        "username",
+        "profile_image_url",
+        "verified",
+        "verified_type",
+      ],
+    });
 
-    // Store as JSON string since session only accepts strings
-    const tokens: TwitterTokens = {
-      accessToken,
-      refreshToken,
-      expiresAt,
+    const sessionData: TwitterSessionData = {
+      tokens: {
+        accessToken,
+        refreshToken,
+        expiresAt: Date.now() + expiresIn * 1000,
+      },
+      userData: {
+        id: userObject.id,
+        name: userObject.name,
+        username: userObject.username,
+        profile_image_url: userObject.profile_image_url,
+        verified: userObject.verified,
+        verified_type: userObject.verified_type,
+        fetchedAt: Date.now(),
+      },
     };
 
     // Create the response with redirect
     const response = NextResponse.redirect(new URL(returnUrl, request.url));
 
     // Set the cookie correctly using NextResponse
+    // Store everything in both cookie and session
     response.cookies.set({
-      name: "twitter_tokens",
-      value: JSON.stringify(tokens),
+      name: "twitter_session",
+      value: JSON.stringify(sessionData),
       expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -112,9 +112,7 @@ export async function GET(request: NextRequest) {
       path: "/",
     });
 
-    await session.update("twitter_tokens", JSON.stringify(tokens));
-
-    // Set a longer-lived cookie for persistence
+    await session.update("twitter_session", JSON.stringify(sessionData));
 
     console.log("🔐 Tokens Updated in Session");
 

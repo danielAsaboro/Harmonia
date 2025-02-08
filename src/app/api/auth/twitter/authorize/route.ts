@@ -2,23 +2,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TwitterApi } from "twitter-api-v2";
 import { getSession } from "@/lib/session";
-import env from "@/config/env";
+// import env from "@/config/env";
 
 export async function POST(request: NextRequest) {
   try {
     // Validate environment configuration
-    if (!env.env.TWITTER_CLIENT_ID || !env.env.TWITTER_CLIENT_SECRET) {
+    if (
+      !process.env.TWITTER_CLIENT_ID! ||
+      !process.env.TWITTER_CLIENT_SECRET!
+    ) {
       throw new Error("Missing Twitter OAuth configuration");
     }
 
     const client = new TwitterApi({
-      clientId: env.env.TWITTER_CLIENT_ID,
-      clientSecret: env.env.TWITTER_CLIENT_SECRET,
+      clientId: process.env.TWITTER_CLIENT_ID,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET,
     });
 
     // Generate OAuth2 authentication link with comprehensive scopes
     const { url, codeVerifier, state } = client.generateOAuth2AuthLink(
-      env.env.TWITTER_CALLBACK_URL,
+      process.env.TWITTER_CALLBACK_URL!,
       {
         scope: [
           "tweet.read",

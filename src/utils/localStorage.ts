@@ -69,6 +69,7 @@ export class TweetStorageService {
   getUserDetails(): TwitterUserDetails | null {
     try {
       console.log("trying to fetch user details");
+      console.log("user details key: ", this.USER_DETAILS_KEY);
       const details = localStorage.getItem(this.USER_DETAILS_KEY);
 
       // Parse details and check if it's a valid, non-empty object

@@ -1,5 +1,6 @@
 // app/content/compose/twitter/layout.tsx
 "use client";
+import { Suspense } from "react";
 import React, { useState, useEffect, useRef } from "react";
 import { EditorProvider, useEditor } from "@/components/editor/context/Editor";
 import { Tweet, Thread } from "@/types/tweet";
@@ -124,16 +125,20 @@ function EditorSidebar() {
         <>
           <div className="p-4 border-b border-gray-800">
             <div className="flex items-center justify-between">
-              {profileImageUrl ? (
-                <Image
-                  src={profileImageUrl}
-                  alt={name}
-                  className="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
-                  title={`${name} (${handle})`}
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-800" />
-              )}
+              <div className="w-10 h-10 rounded-full">
+                {profileImageUrl ? (
+                  <Image
+                    src={profileImageUrl}
+                    alt={name}
+                    className="w-full h-full rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500"
+                    title={`${name} (${handle})`}
+                    width={24}
+                    height={24}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-800 rounded-full" />
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowSearch(true)}

@@ -59,6 +59,8 @@ export function DisconnectTwitter({
             src={profileImageUrl}
             alt={name}
             className="w-12 h-12 rounded-full border-2 border-blue-500"
+            width={48}
+            height={48}
           />
         ) : (
           <Twitter className="w-12 h-12 text-blue-400" />

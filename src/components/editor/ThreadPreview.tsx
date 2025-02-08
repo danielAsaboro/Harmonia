@@ -110,6 +110,8 @@ export default function ThreadPreview({
                                 src={url}
                                 alt={`Media ${mediaIndex + 1}`}
                                 className="w-full h-full object-cover"
+                                width={48}
+                                height={48}
                               />
                             ) : (
                               <video

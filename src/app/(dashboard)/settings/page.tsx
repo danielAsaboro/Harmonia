@@ -28,7 +28,7 @@ import { DisconnectTwitter } from "@/components/auth/DisconnectTwitter";
 import Image from "next/image";
 
 export default function SettingsPage() {
-  const { handle, name, profileImageUrl, } = useUserAccount();
+  const { handle, name, profileImageUrl } = useUserAccount();
   const [activeTab, setActiveTab] = useState("account");
 
   const AccountSection = () => (
@@ -45,6 +45,8 @@ export default function SettingsPage() {
                 src={profileImageUrl}
                 alt={name}
                 className="w-16 h-16 rounded-full border-2 border-primary"
+                width={48}
+                height={48}
               />
             ) : (
               <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
