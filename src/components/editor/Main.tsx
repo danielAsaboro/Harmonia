@@ -239,9 +239,9 @@ export default function PlayGround({
         createdAt: new Date(),
         status: "draft",
       };
-      tweetStorage.saveThread(thread, newTweets, true);
+      tweetStorage.saveThread(thread, newTweets, false);
     } else {
-      tweetStorage.saveTweet(newTweets[0], true);
+      tweetStorage.saveTweet(newTweets[0], false);
     }
   };
 

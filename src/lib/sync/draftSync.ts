@@ -1,4 +1,4 @@
-// src/lib/sync/draftSync.ts
+// // src/lib/sync/draftSync.ts
 
 import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
 import { tweetStorage } from "@/utils/localStorage";
@@ -11,13 +11,13 @@ interface PendingSync {
 
 class DraftSyncService {
   private static instance: DraftSyncService;
-  private pendingSyncs: Set<PendingSync> = new Set();
+  private pendingSyncs: Map<string, PendingSync> = new Map();
   private syncInterval: NodeJS.Timeout | null = null;
-  private SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+  // private SYNC_INTERVAL = 15 * 1000; // 15 seconds for testing
+  private SYNC_INTERVAL = 3 * 60 * 1000; // 3 minutes in milliseconds
   private isSyncing = false;
 
   private constructor() {
-    // Start sync interval when service is created
     this.startSyncInterval();
   }
 
@@ -42,7 +42,7 @@ class DraftSyncService {
     if (this.isSyncing || this.pendingSyncs.size === 0) return;
 
     this.isSyncing = true;
-    const syncsArray = Array.from(this.pendingSyncs);
+    const syncsArray = Array.from(this.pendingSyncs.values());
     this.pendingSyncs.clear();
 
     try {
@@ -62,7 +62,7 @@ class DraftSyncService {
     } catch (error) {
       console.error("Error syncing drafts:", error);
       // Re-add failed syncs to the queue
-      syncsArray.forEach((sync) => this.pendingSyncs.add(sync));
+      syncsArray.forEach((sync) => this.pendingSyncs.set(sync.id, sync));
     } finally {
       this.isSyncing = false;
     }
@@ -120,29 +120,18 @@ class DraftSyncService {
     }
   }
 
-  // Public methods
-
-  /**
-   * Queues a draft for syncing with the backend
-   */
   queueForSync(id: string, type: "tweet" | "thread") {
-    this.pendingSyncs.add({
+    this.pendingSyncs.set(id, {
       id,
       type,
       lastModified: new Date(),
     });
   }
 
-  /**
-   * Forces an immediate sync of all pending drafts
-   */
   async forceSyncNow() {
     await this.syncPendingDrafts();
   }
 
-  /**
-   * Cleans up the service
-   */
   destroy() {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
