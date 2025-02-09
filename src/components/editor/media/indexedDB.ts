@@ -1,5 +1,4 @@
-// indexedDB.ts
-
+// /components/editor/media/indexedDB.ts
 import { v4 as uuidv4 } from "uuid";
 
 // Check if we're in a browser environment
@@ -11,6 +10,12 @@ interface StoredMedia {
   type: string; // mime type
   lastModified: string;
   size: number;
+  serverPath?: string;
+}
+
+interface MediaUploadResult {
+  fileId: string;
+  path: string;
 }
 
 class MediaStorageService {
@@ -88,7 +93,6 @@ class MediaStorageService {
     });
   }
 
-  // Rest of the class implementation remains the same...
   private async getDB(): Promise<IDBDatabase> {
     if (!isBrowser) {
       throw new Error("IndexedDB is not available in this environment");
@@ -96,6 +100,22 @@ class MediaStorageService {
 
     if (this.db) return this.db;
     return this.initDatabase();
+  }
+
+  private async uploadMediaToServer(file: File): Promise<MediaUploadResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/media/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload media to server");
+    }
+
+    return response.json();
   }
 
   async storeMediaFile(file: File): Promise<string> {
@@ -117,6 +137,17 @@ class MediaStorageService {
           size: file.size,
         };
 
+        // Try to upload to server first
+        try {
+          const uploadResult = await this.uploadMediaToServer(file);
+          mediaData.serverPath = uploadResult.path;
+        } catch (error) {
+          console.error(
+            "Failed to upload to server, storing locally only:",
+            error
+          );
+        }
+
         const transaction = db.transaction([this.storeName], "readwrite");
         const store = transaction.objectStore(this.storeName);
         const request = store.add(mediaData);
@@ -130,7 +161,7 @@ class MediaStorageService {
     });
   }
 
-  getMediaFile(mediaId: string): Promise<string | null> {
+  async getMediaFile(mediaId: string): Promise<string | null> {
     if (!isBrowser) {
       return Promise.resolve(null);
     }
@@ -142,27 +173,57 @@ class MediaStorageService {
       const request = store.get(mediaId);
 
       request.onsuccess = () => {
-        const media = request.result;
-        resolve(media ? media.data : null);
+        const media = request.result as StoredMedia;
+        if (media?.serverPath) {
+          // If we have a server path, return that instead
+          resolve(media.serverPath);
+        } else {
+          resolve(media ? media.data : null);
+        }
       };
 
       request.onerror = () => reject(request.error);
     });
   }
 
-  removeMediaFile(mediaId: string): Promise<void> {
+  async removeMediaFile(mediaId: string): Promise<void> {
     if (!isBrowser) {
       return Promise.resolve();
     }
 
     return new Promise(async (resolve, reject) => {
       const db = await this.getDB();
+
+      // First get the media to check if it has a server path
       const transaction = db.transaction([this.storeName], "readwrite");
       const store = transaction.objectStore(this.storeName);
-      const request = store.delete(mediaId);
+      const getRequest = store.get(mediaId);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      getRequest.onsuccess = async () => {
+        const media = getRequest.result as StoredMedia;
+
+        // If media exists on server, try to delete it
+        if (media?.serverPath) {
+          try {
+            await fetch(`/api/media/delete`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ path: media.serverPath }),
+            });
+          } catch (error) {
+            console.error("Failed to delete media from server:", error);
+          }
+        }
+
+        // Delete from IndexedDB
+        const deleteRequest = store.delete(mediaId);
+        deleteRequest.onsuccess = () => resolve();
+        deleteRequest.onerror = () => reject(deleteRequest.error);
+      };
+
+      getRequest.onerror = () => reject(getRequest.error);
     });
   }
 
@@ -185,6 +246,19 @@ class MediaStorageService {
         if (cursor) {
           count++;
           if (count > maxFiles) {
+            const media = cursor.value as StoredMedia;
+            // Also try to delete from server if it exists there
+            if (media.serverPath) {
+              fetch(`/api/media/delete`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ path: media.serverPath }),
+              }).catch((error) => {
+                console.error("Failed to delete old media from server:", error);
+              });
+            }
             store.delete(cursor.primaryKey);
           }
           cursor.continue();

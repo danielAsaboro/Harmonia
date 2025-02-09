@@ -56,10 +56,12 @@ export async function publishTweet(tweet: ScheduledTweet) {
     const v2Client = client.v2;
 
     // Upload media if present
+    const mediaIdsArray = tweet.mediaIds ? JSON.parse(tweet.mediaIds) : [];
+
     let mediaIds: string[] = [];
-    if (tweet.mediaIds.length > 0) {
+    if (mediaIdsArray.length > 0) {
       mediaIds = await Promise.all(
-        tweet.mediaIds.map(async (mediaId) => {
+        mediaIdsArray.map(async (mediaId: string) => {
           const mediaData = await getMediaFile(mediaId);
           if (!mediaData) throw new Error(`Media not found: ${mediaId}`);
 
@@ -133,11 +135,13 @@ export async function publishThread(
 
     // Post tweets sequentially
     for (const tweet of tweets) {
+      const mediaIdsArray = tweet.mediaIds ? JSON.parse(tweet.mediaIds) : [];
+
       // Upload media if present
       let mediaIds: string[] = [];
-      if (tweet.mediaIds.length > 0) {
+      if (mediaIdsArray.length > 0) {
         mediaIds = await Promise.all(
-          tweet.mediaIds.map(async (mediaId) => {
+          mediaIdsArray.map(async (mediaId: string ) => {
             const mediaData = await getMediaFile(mediaId);
             if (!mediaData) throw new Error(`Media not found: ${mediaId}`);
 

@@ -132,7 +132,7 @@ const Sidebar = ({ className }: SidebarProps) => {
         )}
       >
         <Plus className="h-5 w-5" />
-        <span>New Project</span>
+        <span>Quick Menu</span>
       </Link>
 
       <div className="mt-auto space-y-2">

@@ -21,8 +21,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
         <main className="flex-1 bg-background">
           <Header
-            userName="TODO LMAO"
-            className="sticky top-0 z-10 w-full bg-card border-b border-border bg-background"
+            userName="Daniel Favour"
+            className="sticky top-0 z-10 w-full bg-card border-b border-border "
           />
           <div className="p-6">{children}</div>
         </main>

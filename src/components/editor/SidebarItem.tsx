@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Tweet, Thread } from "@/types/tweet";
 import ConfirmDialog from "./ConfirmDialog";
 import { tweetStorage } from "@/utils/localStorage";
+import ShareDraftModal from "./ShareDraftModal";
 
 interface SidebarItemProps {
   item: Tweet | Thread;
@@ -19,8 +20,54 @@ export function SidebarItem({
 }: SidebarItemProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isThread = "tweetIds" in item;
+
+  // Share handler
+  const handleShare = async (settings: { allowComments: boolean }) => {
+    try {
+      // First, ensure the draft is saved on the backend
+      const saveDraftResponse = await fetch("/api/drafts/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: isThread ? "thread" : "tweet",
+          tweet: isThread ? undefined : item,
+          thread: isThread ? item : undefined,
+          tweets: isThread ? (item as Thread).tweetIds : undefined,
+        }),
+      });
+
+      if (!saveDraftResponse.ok) {
+        throw new Error("Failed to save draft before sharing");
+      }
+
+      const response = await fetch("/api/drafts/share", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tweetId: !isThread ? item.id : undefined,
+          threadId: isThread ? item.id : undefined,
+          allowComments: settings.allowComments,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create share link");
+      }
+
+      const { shareLink } = await response.json();
+      return shareLink;
+    } catch (error) {
+      console.error("Error sharing draft:", error);
+      throw error;
+    }
+  };
 
   // Get preview content
   // - first tweet for threads, or the tweet content itself
@@ -59,16 +106,6 @@ export function SidebarItem({
       ${isSelected ? "bg-gray-800" : "hover:bg-gray-900"}
     `}
     >
-      <ConfirmDialog
-        isOpen={showConfirmDialog}
-        onClose={() => setShowConfirmDialog(false)}
-        onConfirm={handleConfirmDelete}
-        title="Confirm Deletion"
-        message={`Are you sure you want to delete this ${
-          isThread ? "Thread" : "Tweet"
-        }? This action cannot be undone.`}
-      />
-
       <div className="flex justify-between items-start group" onClick={onClick}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-1">
@@ -116,7 +153,8 @@ export function SidebarItem({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Share functionality will be implemented here
+                  setShowMenu(false);
+                  setShowShareModal(true);
                 }}
                 className="w-full px-4 py-2 text-sm text-left text-gray-300 hover:bg-gray-800 flex items-center gap-2"
               >
@@ -153,6 +191,22 @@ export function SidebarItem({
           </div>
         )}
       </div>
+      {/* Add ShareDraftModal */}
+      <ShareDraftModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onShare={handleShare}
+        draftType={isThread ? "thread" : "tweet"}
+      />
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete this ${
+          isThread ? "Thread" : "Tweet"
+        }? This action cannot be undone.`}
+      />
     </div>
   );
 }

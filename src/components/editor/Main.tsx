@@ -100,6 +100,8 @@ export default function PlayGround({
     "publishing" | "success" | "error" | null
   >(null);
   const [publishingError, setPublishingError] = useState<string | null>(null);
+  const [lastBackendSync, setLastBackendSync] = useState<Date | null>(null);
+  const pendingChangesRef = useRef(false);
 
   const validateTweets = (): boolean => {
     const MAX_CHARS = 280;
@@ -152,6 +154,7 @@ export default function PlayGround({
 
     setTweets(ensureUniqueIds(newTweets));
     setContentChanged(true);
+    pendingChangesRef.current = true;
 
     if (isThread && threadId) {
       const thread: Thread = {
@@ -868,6 +871,53 @@ export default function PlayGround({
     window.addEventListener("keydown", handleDraftSwitch);
     return () => window.removeEventListener("keydown", handleDraftSwitch);
   }, [currentlyEditedTweet, tweets.length]);
+
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      if (!pendingChangesRef.current) return;
+
+      try {
+        if (isThread && threadId) {
+          const thread: Thread = {
+            id: threadId,
+            tweetIds: tweets.map((t) => t.id),
+            createdAt: new Date(),
+            status: "draft",
+          };
+
+          await fetch("/api/drafts/save", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "thread",
+              thread,
+              tweets,
+            }),
+          });
+        } else {
+          await fetch("/api/drafts/save", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              type: "tweet",
+              tweet: tweets[0],
+            }),
+          });
+        }
+
+        setLastBackendSync(new Date());
+        pendingChangesRef.current = false;
+      } catch (error) {
+        console.error("Failed to sync with backend:", error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(syncInterval);
+  }, [tweets, isThread, threadId]);
 
   if (isLoading) {
     return (
