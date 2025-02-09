@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Tweet } from "@/types/tweet";
 import Image from "next/image";
+import { useUserAccount } from "./context/account";
 
 interface ThreadPreviewProps {
   tweets: Tweet[];
@@ -16,6 +17,7 @@ export default function ThreadPreview({
   getMediaUrl,
 }: ThreadPreviewProps) {
   const [mediaUrls, setMediaUrls] = useState<Record<string, string | null>>({});
+  const { handle: userHandle, getAvatar, name: userName } = useUserAccount();
 
   // Add keyboard event listener for Escape key
   useEffect(() => {
@@ -81,11 +83,12 @@ export default function ThreadPreview({
               )}
 
               <div className="flex items-start space-x-3">
-                <div className="w-12 h-12 rounded-full bg-gray-800 flex-shrink-0" />
+                <div className="flex-shrink-0">{getAvatar()}</div>
+
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
-                    <span className="font-bold text-white">Your Name</span>
-                    <span className="text-gray-500">@yourhandle</span>
+                    <span className="font-bold text-white">{userName}</span>
+                    <span className="text-gray-500">{userHandle}</span>
                     <span className="text-gray-500">·</span>
                     <span className="text-gray-500">{tweet.status}</span>
                   </div>

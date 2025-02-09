@@ -63,25 +63,9 @@ export function SidebarItem({
     <div
       className={`
       relative p-4 cursor-pointer transition-all duration-200 border-b border-gray-800
-      ${isSelected ? "bg-gray-800" : "hover:bg-gray-900"}
+      ${isSelected ? "bg-gray-800 border-l border-gray-50" : "hover:bg-gray-900  "}
     `}
     >
-      <ConfirmDialog
-        isOpen={showConfirmDialog}
-        onClose={() => setShowConfirmDialog(false)}
-        onConfirm={handleConfirmDelete}
-        title="Confirm Deletion"
-        message={`Are you sure you want to delete this ${
-          isThread ? "Thread" : "Tweet"
-        }? This action cannot be undone.`}
-      />
-      <SharedDraftModal
-        isOpen={showShareModal}
-        draftId={item.id}
-        draftType={isThread ? "thread" : "tweet"}
-        onClose={() => setShowShareModal(false)}
-      />
-
       <div className="flex justify-between items-start group" onClick={onClick}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-1">
@@ -130,7 +114,6 @@ export function SidebarItem({
                 onClick={(e) => {
                   e.stopPropagation();
                   handleShare(e);
-                  // Share functionality will be implemented here
                 }}
                 className="w-full px-4 py-2 text-sm text-left text-gray-300 hover:bg-gray-800 flex items-center gap-2"
               >
@@ -167,6 +150,22 @@ export function SidebarItem({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete this ${
+          isThread ? "Thread" : "Tweet"
+        }? This action cannot be undone.`}
+      />
+      <SharedDraftModal
+        isOpen={showShareModal}
+        draftId={item.id}
+        draftType={isThread ? "thread" : "tweet"}
+        onClose={() => setShowShareModal(false)}
+      />
     </div>
   );
 }

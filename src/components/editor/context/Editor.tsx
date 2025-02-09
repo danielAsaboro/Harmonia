@@ -32,6 +32,8 @@ type EditorContextType = {
   refreshCounter: number;
   isSidebarVisible: boolean;
   toggleSidebar: () => void;
+  isMetadataTabVisible: boolean;
+  toggleMetadataTab: () => void;
   handleNewDraft: () => void;
   handleScheduleDraft: () => void;
   handlePublishDraft: () => void;
@@ -48,9 +50,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     selectedDraftId: null,
     selectedDraftType: null,
   });
+  const [isMetadataTabVisible, setIsMetadataTabVisible] = useState(false);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarVisible((prev) => !prev);
+  }, []);
+
+  const toggleMetadataTab = useCallback(() => {
+    setIsMetadataTabVisible((prev) => !prev);
   }, []);
 
   const showEditor = useCallback(
@@ -272,6 +279,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         refreshCounter,
         isSidebarVisible,
         toggleSidebar,
+        isMetadataTabVisible,
+        toggleMetadataTab,
         handleNewDraft: () => window.dispatchEvent(new CustomEvent("newDraft")),
         handleScheduleDraft: () =>
           window.dispatchEvent(new CustomEvent("scheduleDraft")),

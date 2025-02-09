@@ -6,7 +6,16 @@ import MediaUpload from "./media/MediaUpload";
 import MediaPreview from "./media/MediaPreview";
 import ThreadPreview from "./ThreadPreview";
 import { useEditor } from "./context/Editor";
-import { PenSquare, Eye, Save, Clock, Send, X, Search } from "lucide-react";
+import {
+  PenSquare,
+  Eye,
+  Save,
+  Clock,
+  Send,
+  X,
+  Search,
+  Info,
+} from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { SaveStatus } from "./storage/SaveStatus";
 import { useUserAccount } from "./context/account";
@@ -21,7 +30,7 @@ import {
 import SchedulePicker from "../scheduler/SchedulePicker";
 import { cn } from "@/utils/ts-merge";
 import PublishingModal from "./PublishingModal";
-import { useKeyboard } from "@/context/keyboard-context";
+import ActionsMenu from "./PowerTab";
 
 //  helper function
 const repurposeTweet = (tweet: Tweet): Tweet => {
@@ -121,6 +130,8 @@ const cleanupMediaAndDeleteThread = async (threadId: string) => {
   }
 };
 
+const DEFAULT_TEXTAREA_HEIGHT = "60px";
+
 export default function PlayGround({
   draftId,
   draftType,
@@ -128,7 +139,6 @@ export default function PlayGround({
   const {
     name: userName,
     handle: userTwitterHandle,
-    profileImageUrl,
     isLoading: isUserAccountDetailsLoading,
     getAvatar,
   } = useUserAccount();
@@ -140,6 +150,7 @@ export default function PlayGround({
     setActiveTab,
     loadScheduledItem,
     editorState,
+    toggleMetadataTab,
   } = useEditor();
   const [isLoading, setIsLoading] = useState(true);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -213,6 +224,12 @@ export default function PlayGround({
 
     setTweets(ensureUniqueIds(newTweets));
     setContentChanged(true);
+
+    // Adjust height of changed textarea
+    const textarea = textareaRefs.current[index];
+    if (textarea) {
+      adjustTextareaHeight(textarea);
+    }
 
     if (isThread && threadId) {
       const thread: Thread = {
@@ -743,8 +760,28 @@ export default function PlayGround({
   };
 
   const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
+    if (!element) return;
+
+    // Reset height to auto first
+    // to get the correct scrollHeight
     element.style.height = "auto";
-    element.style.height = `${element.scrollHeight}px`;
+
+    // If the textarea is empty, set to default height
+    if (!element.value.trim()) {
+      element.style.height = DEFAULT_TEXTAREA_HEIGHT;
+    } else {
+      // Set to scrollHeight to accommodate content
+      element.style.height = `${element.scrollHeight}px`;
+    }
+  };
+
+  // Function to adjust all textareas in the thread
+  const adjustAllTextareas = () => {
+    textareaRefs.current.forEach((textarea) => {
+      if (textarea) {
+        adjustTextareaHeight(textarea);
+      }
+    });
   };
 
   const handleRepurpose = () => {
@@ -774,6 +811,10 @@ export default function PlayGround({
     ...tweet,
     id: tweet.id || `${uuidv4()}-${index}`, // Fallback ID includes index for uniqueness
   }));
+
+  useEffect(() => {
+    adjustAllTextareas();
+  }, [tweets]);
 
   // // Initialize editor with proper state
   useEffect(() => {
@@ -1064,6 +1105,12 @@ export default function PlayGround({
                 <Send size={18} />
                 Publish
               </button>
+              <button
+                className="transition-all duration-200"
+                onClick={toggleMetadataTab}
+              >
+                <Info />
+              </button>
             </>
           )}
 
@@ -1090,6 +1137,7 @@ export default function PlayGround({
         </div>
       </div>
 
+      {/* content */}
       <div className="bg-gray-900 rounded-lg">
         {tweetsWithUniqueIds.map((tweet, index) => (
           <div key={tweet.id} className="relative p-4">
@@ -1148,14 +1196,20 @@ export default function PlayGround({
                   onChange={(e) => {
                     if (activeTab === "drafts") {
                       handleTweetChange(index, e.target.value);
-                      adjustTextareaHeight(e.target);
+                      // adjustTextareaHeight(e.target);
                     }
                   }}
                   placeholder={
                     index === 0 ? "What's happening?" : "Add to thread..."
                   }
                   className="w-full bg-transparent border-none resize-none focus:ring-0 focus:outline-none text-white min-h-[60px] mt-2"
-                  ref={(el) => setTextAreaRef(el, index)}
+                  // ref={(el) => setTextAreaRef(el, index)}
+                  ref={(el) => {
+                    setTextAreaRef(el, index);
+                    if (el) {
+                      adjustTextareaHeight(el);
+                    }
+                  }}
                   onKeyDown={(e) => {
                     if (
                       activeTab === "drafts" &&

@@ -8,6 +8,8 @@ import {
 import { useEditor } from "@/components/editor/context/Editor";
 import LoadingState from "@/components/editor/LoadingState";
 import PlayGround from "@/components/editor/Main";
+import MetadataTab from "@/components/editor/MetadataTab";
+import ActionsMenu from "@/components/editor/PowerTab";
 import { tweetStorage } from "@/utils/localStorage";
 import { PenSquare } from "lucide-react";
 import { useEffect } from "react";
@@ -109,7 +111,7 @@ function WelcomeScreen() {
 }
 
 function TwitterEditorContent() {
-  const { editorState } = useEditor();
+  const { editorState, isMetadataTabVisible } = useEditor();
   const { isLoading } = useUserAccount();
 
   const userAccount = useUserAccount();
@@ -124,17 +126,33 @@ function TwitterEditorContent() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-4xl mx-auto p-4">
+    <div className="flex min-h-screen bg-black text-white">
+      <div className="flex-auto max-w-4xl mx-auto p-4 ">
+        {/* Added relative */}
         {editorState.isVisible ? (
-          <PlayGround
-            draftId={editorState.selectedDraftId}
-            draftType={editorState.selectedDraftType}
-          />
+          <>
+            <PlayGround
+              draftId={editorState.selectedDraftId}
+              draftType={editorState.selectedDraftType}
+            />
+
+            <div className="fixed inset-x-0 bottom-8 mx-auto w-full max-w-4xl">
+              <div className="flex justify-center">
+                <ActionsMenu />
+              </div>
+            </div>
+          </>
         ) : (
           <WelcomeScreen />
         )}
       </div>
+      {isMetadataTabVisible && editorState.isVisible && (
+        <div className="flex">
+          <div className="flex-shrink-0 h-screen transition-all duration-300">
+            <MetadataTab />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
