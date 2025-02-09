@@ -38,3 +38,46 @@ export interface StoredMedia {
   type: string; // mime type
   lastModified: string;
 }
+
+export interface CommentMetadata {
+  tweetId: string;
+  highlightedContent: string;
+  startOffset: number;
+  endOffset: number;
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  authorName: string;
+  authorId?: string;
+  createdAt: string;
+  position?: number;
+  metadata?: CommentMetadata;
+  resolved?: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string;
+}
+
+export interface TwitterUserData {
+  id: string;
+  name: string;
+  username: string;
+  profile_image_url: string;
+  verified: boolean;
+  verified_type?: string;
+  fetchedAt: number;
+}
+
+export interface DraftResponse {
+  draft: Tweet | ThreadWithTweets;
+  comments: Comment[];
+  canComment: boolean;
+  expiresAt: string;
+  author: {
+    id: string;
+    name: string;
+    handle: string;
+    profileUrl?: string;
+  };
+}

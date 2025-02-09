@@ -433,8 +433,8 @@ class DatabaseService {
   addComment(comment: SharedDraftComment): void {
     const stmt = this.db.prepare(`
       INSERT INTO shared_draft_comments 
-      (id, sharedDraftId, content, authorId, authorName, createdAt, position)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (id, sharedDraftId, content, authorId, authorName, createdAt, position, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -444,19 +444,56 @@ class DatabaseService {
       comment.authorId,
       comment.authorName,
       comment.createdAt,
-      comment.position || null
+      comment.position || null,
+      JSON.stringify(comment.metadata)
     );
   }
 
-  // Get comments for a shared draft
+  resolveComment(commentId: string, userId: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE shared_draft_comments 
+      SET resolved = 1, resolvedAt = datetime('now'), resolvedBy = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(userId, commentId);
+  }
+
+  deleteComment(commentId: string): void {
+    const stmt = this.db.prepare(`
+      DELETE FROM shared_draft_comments 
+      WHERE id = ?
+    `);
+
+    stmt.run(commentId);
+  }
+
   getComments(sharedDraftId: string): SharedDraftComment[] {
     const stmt = this.db.prepare(`
       SELECT * FROM shared_draft_comments 
       WHERE sharedDraftId = ? 
-      ORDER BY createdAt ASC
+      ORDER BY createdAt DESC
     `);
 
-    return stmt.all(sharedDraftId) as SharedDraftComment[];
+    const comments = stmt.all(sharedDraftId) as any[];
+    return comments.map((comment) => ({
+      ...comment,
+      metadata: JSON.parse(comment.metadata),
+    }));
+  }
+
+  canModifyComment(commentId: string, userId: string): boolean {
+    const stmt = this.db.prepare(`
+      SELECT c.authorId, s.creatorId
+      FROM shared_draft_comments c
+      JOIN shared_drafts s ON c.sharedDraftId = s.id
+      WHERE c.id = ?
+    `);
+
+    const result = stmt.get(commentId) as any;
+    return (
+      result && (result.authorId === userId || result.creatorId === userId)
+    );
   }
 
   // Delete expired shared drafts and their comments

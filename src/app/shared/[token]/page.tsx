@@ -2,56 +2,43 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Tweet, Thread, ThreadWithTweets } from "@/types/tweet";
+import {
+  Tweet,
+  Thread,
+  ThreadWithTweets,
+  DraftResponse,
+  CommentMetadata,
+  Comment,
+} from "@/types/tweet";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import ReadOnlyTweetViewer from "../../../components/editor/ReadOnlyTweetViewer";
-
-interface TwitterUserData {
-  id: string;
-  name: string;
-  username: string;
-  profile_image_url: string;
-  verified: boolean;
-  verified_type?: string;
-  fetchedAt: number;
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  authorName: string;
-  authorId?: string;
-  createdAt: string;
-  position?: number;
-}
-
-interface DraftResponse {
-  draft: Tweet | ThreadWithTweets;
-  comments: Comment[];
-  canComment: boolean;
-  expiresAt: string;
-  author: {
-    id: string;
-    name: string;
-    handle: string;
-    profileUrl?: string;
-  };
-}
+import { CommentList } from "@/components/comments/CommentList";
+import { CommentForm } from "@/components/comments/CommentForm";
 
 export default function SharedDraftPage() {
   const params = useParams();
   const [draft, setDraft] = useState<Tweet | ThreadWithTweets | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [filter, setFilter] = useState<"all" | "resolved" | "unresolved">(
+    "all"
+  );
   const [canComment, setCanComment] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userData, setUserData] = useState<TwitterUserData | null>(null);
   const [author, setAuthor] = useState<DraftResponse["author"] | null>(null);
+  const [selectedText, setSelectedText] = useState<CommentMetadata | null>(
+    null
+  );
+  const [showCommentForm, setShowCommentForm] = useState(false);
 
-  // Fetch user data if logged in
+  const filteredComments = comments.filter((comment) => {
+    if (filter === "all") return true;
+    if (filter === "resolved") return comment.resolved;
+    return !comment.resolved;
+  });
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -68,26 +55,16 @@ export default function SharedDraftPage() {
     fetchUserData();
   }, []);
 
-  // Fetch draft data using the access token
   useEffect(() => {
     const fetchDraft = async () => {
       try {
         const response = await fetch(`/api/shared-draft/${params.token}`);
-
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(
-            errorData.error ||
-              (response.status === 404
-                ? "Draft not found or expired"
-                : "Failed to load draft")
-          );
+          throw new Error(errorData.error || "Failed to load draft");
         }
 
         const data = await response.json();
-        console.log("Received data:", data);
-
-        // Extract author data from the draft object
         const authorData = {
           id: data.draft.userId,
           name: data.draft.authorName,
@@ -95,7 +72,6 @@ export default function SharedDraftPage() {
           profileUrl: data.draft.authorProfileUrl || undefined,
         };
 
-        // Create a clean draft object without author fields
         const { authorName, authorHandle, authorProfileUrl, ...cleanDraft } =
           data.draft;
 
@@ -115,8 +91,62 @@ export default function SharedDraftPage() {
     }
   }, [params.token]);
 
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
+  useEffect(() => {
+    const handleSelection = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const range = selection.getRangeAt(0);
+      const text = range.toString().trim();
+
+      if (text) {
+        setSelectedText({
+          tweetId: draft?.id || "",
+          highlightedContent: text,
+          startOffset: range.startOffset,
+          endOffset: range.endOffset,
+        });
+        setShowCommentForm(true);
+      }
+    };
+
+    document.addEventListener("mouseup", handleSelection);
+    return () => document.removeEventListener("mouseup", handleSelection);
+  }, [draft]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showCommentForm) {
+        setShowCommentForm(false);
+        setSelectedText(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showCommentForm]);
+
+  const handleAddComment = async (userNewComment: string) => {
+    if (!userNewComment.trim()) return;
+
+    const commentData = {
+      content: userNewComment.trim(),
+      metadata: selectedText,
+    };
+
+    const optimisticComment: Comment = {
+      id: crypto.randomUUID(),
+      content: userNewComment,
+      authorName: userData?.name || "Anonymous",
+      authorId: userData?.id,
+      createdAt: new Date().toISOString(),
+      metadata: selectedText || undefined,
+    };
+
+    setComments((prev) => [optimisticComment, ...prev]);
+    setNewComment("");
+    setShowCommentForm(false);
+    setSelectedText(null);
 
     try {
       const response = await fetch(
@@ -124,135 +154,117 @@ export default function SharedDraftPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: newComment.trim(),
-          }),
+          body: JSON.stringify(commentData),
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to add comment");
-      }
+      if (!response.ok) throw new Error("Failed to add comment");
 
       const { comment } = await response.json();
-      setComments((prev) => [...prev, comment]);
-      setNewComment("");
+      setComments((prev) =>
+        prev.map((c) => (c.id === optimisticComment.id ? comment : c))
+      );
     } catch (err) {
+      setComments((prev) => prev.filter((c) => c.id !== optimisticComment.id));
       console.error("Error adding comment:", err);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const handleResolveComment = async (commentId: string) => {
+    try {
+      await fetch(`/api/shared-draft/comment/${commentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolved: true }),
+      });
+
+      setComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, resolved: true } : c))
+      );
+    } catch (err) {
+      console.error("Error resolving comment:", err);
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await fetch(`/api/shared-draft/comment/${commentId}`, {
+        method: "DELETE",
+      });
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold text-red-500 mb-4">Error</h1>
-        <p className="text-gray-400">{error}</p>
-      </div>
-    );
-  }
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+    }
+  };
+
+  const canModifyComment = (comment: Comment) =>
+    userData?.id === author?.id || comment.authorId === userData?.id;
+
+  if (loading) return <div className="loading">Loading...</div>;
+  if (error) return <div className="error">{error}</div>;
 
   const isThread = draft && "tweetIds" in draft;
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:w-5/12">
-      <Card className="mb-8 bg-red-50">
-        <CardHeader>
-          <h1 className="text-2xl font-bold">
-            Shared {isThread ? "Thread" : "Tweet"} Draft
-          </h1>
-        </CardHeader>
-        <CardContent>
-          {draft && author && (
-            <>
-              <ReadOnlyTweetViewer
-                tweets={
-                  isThread
-                    ? (draft as ThreadWithTweets).tweets
-                    : [draft as Tweet]
-                }
-                isThread={isThread!}
-                author={author}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex gap-6">
+        {/* Left side: Draft content */}
+        <div className="w-7/12">
+          <Card className="mb-8 sticky top-4">
+            <CardHeader>
+              <h1 className="text-2xl font-bold">
+                Shared {isThread ? "Thread" : "Tweet"} Draft
+              </h1>
+            </CardHeader>
+            <CardContent>
+              {draft && author && (
+                <ReadOnlyTweetViewer
+                  tweets={
+                    isThread
+                      ? (draft as ThreadWithTweets).tweets
+                      : [draft as Tweet]
+                  }
+                  isThread={isThread!}
+                  author={author}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-      {canComment && (
-        <Card className="mb-8">
-          <CardHeader>
-            <h2 className="text-xl font-bold">Comments</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Comment Input */}
-              <div className="flex items-start space-x-4">
-                <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center shrink-0">
-                  {userData ? (
-                    <img
-                      src={userData.profile_image_url}
-                      alt={userData.name}
-                      className="w-10 h-10 rounded-full"
-                    />
-                  ) : (
-                    <span className="text-lg">A</span>
-                  )}
-                </div>
-                <div className="flex-1 space-y-2">
-                  <Input
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
-                    className="w-full"
-                  />
-                  <Button
-                    onClick={handleAddComment}
-                    disabled={!newComment.trim()}
-                    size="sm"
-                  >
-                    Comment
-                  </Button>
-                </div>
-              </div>
+        {/* Right side: Comments */}
+        <div className="w-5/12 relative">
+          <CommentList
+            comments={[...filteredComments]}
+            filter={filter}
+            canComment={canComment}
+            onFilterChange={setFilter}
+            canModifyComment={canModifyComment}
+            onResolveComment={handleResolveComment}
+            onDeleteComment={handleDeleteComment}
+          />
+        </div>
+      </div>
 
-              {/* Comments List */}
-              <div className="space-y-4 mt-6">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center shrink-0">
-                      <span className="text-lg">
-                        {comment.authorName[0].toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium">
-                          {comment.authorName}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {formatDate(comment.createdAt)}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-gray-300">{comment.content}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {showCommentForm && selectedText && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setShowCommentForm(false);
+              setSelectedText(null);
+            }}
+          />
+          <CommentForm
+            selectedText={selectedText}
+            onSubmit={handleAddComment}
+            onCancel={() => {
+              setShowCommentForm(false);
+              setSelectedText(null);
+            }}
+          />
+        </div>
       )}
     </div>
   );

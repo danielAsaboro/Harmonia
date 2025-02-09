@@ -17,14 +17,25 @@ export interface SharedDraft {
   shareState: "active" | "expired" | "revoked";
 }
 
+export interface CommentMetadata {
+  tweetId: string;
+  highlightedContent: string;
+  startOffset: number;
+  endOffset: number;
+}
+
 export interface SharedDraftComment {
   id: string;
   sharedDraftId: string;
   content: string;
-  authorId: string | null; // Null for anonymous comments
+  authorId: string | null;
   authorName: string;
   createdAt: string;
-  position?: number; // For thread-specific comments
+  position?: number;
+  metadata: CommentMetadata;
+  resolved: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string;
 }
 
 export interface DraftTweet extends Omit<Tweet, "createdAt"> {
@@ -177,21 +188,24 @@ export function initializeDatabase(db: Database.Database) {
     );
   `);
 
-  
   // Create shared draft comments table
   db.exec(`
-  CREATE TABLE IF NOT EXISTS shared_draft_comments (
-    id TEXT PRIMARY KEY,
-    sharedDraftId TEXT NOT NULL,
-    content TEXT NOT NULL,
-    authorId TEXT,
-    authorName TEXT NOT NULL,
-    createdAt TEXT NOT NULL,
-    position INTEGER,
-    FOREIGN KEY(sharedDraftId) REFERENCES shared_drafts(id) ON DELETE CASCADE,
-    FOREIGN KEY(authorId) REFERENCES user_tokens(userId)
-  );
-`);
+    CREATE TABLE IF NOT EXISTS shared_draft_comments (
+      id TEXT PRIMARY KEY,
+      sharedDraftId TEXT NOT NULL,
+      content TEXT NOT NULL,
+      authorId TEXT,
+      authorName TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      position INTEGER,
+      metadata TEXT NOT NULL DEFAULT '{}',
+      resolved BOOLEAN NOT NULL DEFAULT 0,
+      resolvedAt TEXT,
+      resolvedBy TEXT,
+      FOREIGN KEY(sharedDraftId) REFERENCES shared_drafts(id) ON DELETE CASCADE,
+      FOREIGN KEY(authorId) REFERENCES user_tokens(userId)
+    );
+  `);
 
   // Create indices for faster querying
   db.exec(`
@@ -216,4 +230,11 @@ export function initializeDatabase(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_shared_drafts_draft_id ON shared_drafts(draftId);
 
   `);
+
+  // Create indices for the new fields
+  db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_comments_shared_draft_id ON shared_draft_comments(sharedDraftId);
+  CREATE INDEX IF NOT EXISTS idx_comments_author_id ON shared_draft_comments(authorId);
+  CREATE INDEX IF NOT EXISTS idx_comments_resolved ON shared_draft_comments(resolved);
+`);
 }

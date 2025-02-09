@@ -65,7 +65,7 @@ export async function GET(
 
     if (!draft) {
       return NextResponse.json(
-        { error: "Original draft not found" },
+        { error: "Original draft not found or has been deleted" },
         { status: 404 }
       );
     }
