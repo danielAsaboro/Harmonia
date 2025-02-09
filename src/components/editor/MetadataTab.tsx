@@ -102,15 +102,17 @@ const UnifiedChecklist: React.FC = () => {
 
   return (
     <Card className="w-full max-w-md">
-      <input
-        ref={inputRef}
-        type="text"
-        value={currentInput}
-        onChange={(e) => setCurrentInput(e.target.value)}
-        onKeyUp={handleKeyPress}
-        placeholder="Add a tip and press Enter..."
-        className="w-full p-2 text-base bg-transparent border-b border-gray-200 focus:outline-none focus:border-gray-400 transition-colors"
-      />
+      <div className="p-2">
+        <input
+          ref={inputRef}
+          type="text"
+          value={currentInput}
+          onChange={(e) => setCurrentInput(e.target.value)}
+          onKeyUp={handleKeyPress}
+          placeholder="Add a Tip or Todo and press enter..."
+          className="w-full p-2 text-base bg-transparent border-b border-gray-200 focus:outline-none focus:border-gray-400 transition-colors"
+        />
+      </div>
       <CardContent>
         <div className="pt-2 space-y-2">
           {items.map((item) => (

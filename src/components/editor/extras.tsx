@@ -1,5 +1,4 @@
 import React from "react";
-
 interface CharacterCountProps {
   content: string;
   maxLength?: number;
@@ -55,11 +54,11 @@ const CharacterCount: React.FC<CharacterCountProps> = ({
       {/* Text display for near limit or over limit */}
       {(isNearLimit || isOverLimit) && (
         <span
-          className={`text-xs ${
+          className={`text-[0.65rem] font-medium leading-none tabular-nums ${
             isOverLimit ? "text-red-500" : "text-amber-500"
           }`}
         >
-          {Math.abs(remainingChars)}
+          {remainingChars}
         </span>
       )}
     </div>

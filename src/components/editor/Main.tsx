@@ -31,6 +31,7 @@ import SchedulePicker from "../scheduler/SchedulePicker";
 import { cn } from "@/utils/ts-merge";
 import PublishingModal from "./PublishingModal";
 import ActionsMenu from "./PowerTab";
+import MentionInput from "./MentionInput";
 
 //  helper function
 const repurposeTweet = (tweet: Tweet): Tweet => {
@@ -1188,28 +1189,19 @@ export default function PlayGround({
                       </button>
                     )}
                 </div>
-
                 {/* Make textarea readonly if not in drafts */}
-                <textarea
+                <MentionInput
                   value={tweet.content}
                   onFocus={() => setCurrentlyEditedTweet(index)}
-                  onChange={(e) => {
+                  onChange={(value) => {
                     if (activeTab === "drafts") {
-                      handleTweetChange(index, e.target.value);
-                      // adjustTextareaHeight(e.target);
+                      handleTweetChange(index, value);
                     }
                   }}
                   placeholder={
                     index === 0 ? "What's happening?" : "Add to thread..."
                   }
-                  className="w-full bg-transparent border-none resize-none focus:ring-0 focus:outline-none text-white min-h-[60px] mt-2"
-                  // ref={(el) => setTextAreaRef(el, index)}
-                  ref={(el) => {
-                    setTextAreaRef(el, index);
-                    if (el) {
-                      adjustTextareaHeight(el);
-                    }
-                  }}
+                  className="text-white min-h-[60px] mt-2"
                   onKeyDown={(e) => {
                     if (
                       activeTab === "drafts" &&
@@ -1221,8 +1213,14 @@ export default function PlayGround({
                     }
                   }}
                   readOnly={activeTab !== "drafts"}
+                  ref={(el) => {
+                    setTextAreaRef(el, index);
+                    if (el) {
+                      adjustTextareaHeight(el);
+                    }
+                  }}
                 />
-
+               
                 {/* Media Preview */}
                 {tweet.mediaIds && tweet.mediaIds.length > 0 && (
                   <div className="mt-2">
