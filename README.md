@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Harmonia
+
+An AI-powered community management platform for Web3 communities, focusing on Twitter and Telegram integration.
+
+## Overview
+
+Harmonia is a comprehensive suite of tools designed to streamline community management through AI-powered automation, intelligent content scheduling, and enhanced member engagement tracking.
+
+## Key Features
+
+### 🤖 Content Studio
+- Advanced tweet composer with thread support
+- Smart scheduling system with timezone awareness
+- Draft management and collaboration features
+- Media upload and preview capabilities
+
+### 📚 Knowledge Base Management
+- Document upload and processing
+- RAG (Retrieval-Augmented Generation) configuration
+- Automated response testing
+- Content verification system
+
+### 👥 Member Management
+- Intelligent member matching
+- Skill and interest tracking
+- Project history management
+- Engagement analytics
+
+### 📊 System Configuration
+- LLM configuration options
+- API integration settings
+- Privacy controls
+- Backup and restore functionality
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TailwindCSS
+- **Backend**: Node.js with SQLite (better-sqlite3)
+- **AI/ML**: Custom LLM integration
+- **Authentication**: Twitter OAuth 2.0
+- **State Management**: Custom React Context
+- **UI Components**: Radix UI primitives
+- **Styling**: TailwindCSS with custom theme system
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js (LTS version)
+- Yarn package manager
+- Twitter Developer Account with OAuth 2.0 credentials
+
+### Environment Setup
+
+Create a `.env.local` file with the following variables:
+
+```env
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_token_secret
+TWITTER_BEARER_TOKEN=your_bearer_token
+TWITTER_CLIENT_ID=your_client_id
+TWITTER_CLIENT_SECRET=your_client_secret
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+TWITTER_CALLBACK_URL=http://localhost:3000/api/auth/twitter/callback
+USER_CACHE_DURATION=604800000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Clone the repository
+git clone https://github.com/Superteam-AI-supercharge/harmonia.git
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Navigate to project directory
+cd harmonia
 
-## Learn More
+# Install dependencies
+yarn install
 
-To learn more about Next.js, take a look at the following resources:
+# Start development server
+yarn dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Development Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `yarn dev`: Start development server
+- `yarn build`: Create production build
+- `yarn start`: Start production server
+- `yarn lint`: Run ESLint checks
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+harmonia/
+├── app/               # Next.js app directory
+├── components/        # React components
+├── lib/              # Core utilities and services
+├── public/           # Static assets
+├── styles/           # Global styles
+├── types/            # TypeScript type definitions
+└── utils/            # Helper utilities
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Features in Detail
+
+### Content Studio
+- Rich text editor for tweets and threads
+- Media upload with preview
+- Scheduling system with timezone support
+- Draft management
+- Collaboration tools
+
+### Knowledge Base
+- Document processing
+- Content verification
+- Response testing interface
+- Training data management
+
+### Member Management
+- Profile matching
+- Skill tracking
+- Project history
+- Analytics dashboard
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Superteam DAO for support and resources
+- Twitter API for platform integration
+- Open source community for various tools and libraries used
+
+## Support
+
+For support, email [support@harmonia.ai](mailto:support@harmonia.ai) or join our [Discord community](https://discord.gg/harmonia).
