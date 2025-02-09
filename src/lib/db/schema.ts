@@ -2,6 +2,31 @@
 import Database from "better-sqlite3";
 import { Tweet, Thread } from "@/types/tweet";
 
+export interface SharedDraft {
+  id: string;
+  draftId: string;
+  draftType: "tweet" | "thread";
+  createdAt: string;
+  expiresAt: string;
+  canComment: boolean;
+  creatorId: string;
+  accessToken: string;
+  authorName: string;
+  authorHandle: string;
+  authorProfileUrl?: string;
+  shareState: "active" | "expired" | "revoked";
+}
+
+export interface SharedDraftComment {
+  id: string;
+  sharedDraftId: string;
+  content: string;
+  authorId: string | null; // Null for anonymous comments
+  authorName: string;
+  createdAt: string;
+  position?: number; // For thread-specific comments
+}
+
 export interface DraftTweet extends Omit<Tweet, "createdAt"> {
   createdAt: string;
   userId: string;
@@ -133,6 +158,41 @@ export function initializeDatabase(db: Database.Database) {
     );
 `);
 
+  // Create shared drafts table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS shared_drafts (
+      id TEXT PRIMARY KEY,
+      draftId TEXT NOT NULL,
+      draftType TEXT NOT NULL CHECK(draftType IN ('tweet', 'thread')),
+      createdAt TEXT NOT NULL,
+      expiresAt TEXT NOT NULL,
+      canComment BOOLEAN NOT NULL DEFAULT 0,
+      creatorId TEXT NOT NULL,
+      accessToken TEXT NOT NULL UNIQUE,
+      authorName TEXT NOT NULL,
+      authorHandle TEXT NOT NULL,
+      authorProfileUrl TEXT,
+      shareState TEXT NOT NULL DEFAULT 'active',
+      FOREIGN KEY(creatorId) REFERENCES user_tokens(userId)
+    );
+  `);
+
+  
+  // Create shared draft comments table
+  db.exec(`
+  CREATE TABLE IF NOT EXISTS shared_draft_comments (
+    id TEXT PRIMARY KEY,
+    sharedDraftId TEXT NOT NULL,
+    content TEXT NOT NULL,
+    authorId TEXT,
+    authorName TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    position INTEGER,
+    FOREIGN KEY(sharedDraftId) REFERENCES shared_drafts(id) ON DELETE CASCADE,
+    FOREIGN KEY(authorId) REFERENCES user_tokens(userId)
+  );
+`);
+
   // Create indices for faster querying
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_tweets_scheduled_for ON scheduled_tweets(scheduledFor);
@@ -147,4 +207,13 @@ export function initializeDatabase(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_draft_threads_user_id ON draft_threads(userId);
     CREATE INDEX IF NOT EXISTS idx_draft_tweets_thread_id ON draft_tweets(threadId);
 `);
+
+  // Create indices for faster querying
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_shared_drafts_creator ON shared_drafts(creatorId);
+    CREATE INDEX IF NOT EXISTS idx_shared_drafts_access_token ON shared_drafts(accessToken);
+    CREATE INDEX IF NOT EXISTS idx_shared_draft_comments_draft ON shared_draft_comments(sharedDraftId);
+    CREATE INDEX IF NOT EXISTS idx_shared_drafts_draft_id ON shared_drafts(draftId);
+
+  `);
 }

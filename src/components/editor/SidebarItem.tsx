@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Tweet, Thread } from "@/types/tweet";
 import ConfirmDialog from "./ConfirmDialog";
 import { tweetStorage } from "@/utils/localStorage";
+import SharedDraftModal from "./SharedDraftModal";
 
 interface SidebarItemProps {
   item: Tweet | Thread;
@@ -21,6 +22,7 @@ export function SidebarItem({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isThread = "tweetIds" in item;
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Get preview content
   // - first tweet for threads, or the tweet content itself
@@ -52,6 +54,11 @@ export function SidebarItem({
     onDelete(item.id);
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setShowShareModal(true);
+  };
   return (
     <div
       className={`
@@ -67,6 +74,12 @@ export function SidebarItem({
         message={`Are you sure you want to delete this ${
           isThread ? "Thread" : "Tweet"
         }? This action cannot be undone.`}
+      />
+      <SharedDraftModal
+        isOpen={showShareModal}
+        draftId={item.id}
+        draftType={isThread ? "thread" : "tweet"}
+        onClose={() => setShowShareModal(false)}
       />
 
       <div className="flex justify-between items-start group" onClick={onClick}>
@@ -116,6 +129,7 @@ export function SidebarItem({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  handleShare(e);
                   // Share functionality will be implemented here
                 }}
                 className="w-full px-4 py-2 text-sm text-left text-gray-300 hover:bg-gray-800 flex items-center gap-2"

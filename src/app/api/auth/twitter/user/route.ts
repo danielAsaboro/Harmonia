@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching user data:", error);
     return NextResponse.json(
-      { error: "Failed to fetch user data" },
+      { error: `Failed to fetch user data ${error}` },
       { status: 500 }
     );
   }

@@ -1,6 +1,7 @@
 // src/components/editor/media/MediaPreview.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 
 interface Props {
   mediaIds: string[];
@@ -71,8 +72,25 @@ export default function MediaPreview({
     return () => window.removeEventListener("keydown", handleKeyboard);
   }, [fullscreenMedia, handleNavigation]);
 
-  const isImageUrl = (url: string) => {
-    return url.match(/^data:image/);
+  const isImageUrl = (url: string): boolean => {
+    // Check for data URLs
+    if (url.startsWith("data:image/")) {
+      return true;
+    }
+
+    // Check for common image file extensions
+    const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+
+    try {
+      // Create URL object to handle both relative and absolute URLs
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname.toLowerCase();
+
+      return imageExtensions.some((ext) => pathname.endsWith(ext));
+    } catch (e) {
+      // If URL parsing fails, try direct string matching
+      return imageExtensions.some((ext) => url.toLowerCase().endsWith(ext));
+    }
   };
 
   const handleMediaClick = (url: string, index: number) => {
@@ -123,72 +141,74 @@ export default function MediaPreview({
       </div>
 
       {/* Fullscreen Media Modal */}
-      {fullscreenMedia && (
-        <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
-          onClick={() => {
-            setFullscreenMedia(null);
-            setCurrentFullscreenIndex(-1);
-          }}
-        >
+      {fullscreenMedia &&
+        createPortal(
           <div
-            className="max-w-[90vw] max-h-[90vh] relative"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+            onClick={() => {
+              setFullscreenMedia(null);
+              setCurrentFullscreenIndex(-1);
+            }}
           >
-            {isImageUrl(fullscreenMedia) ? (
-              <img
-                src={fullscreenMedia}
-                alt={`Fullscreen media ${currentFullscreenIndex + 1}`}
-                className="max-w-full max-h-[90vh] object-contain"
-              />
-            ) : (
-              <video
-                src={fullscreenMedia}
-                className="max-w-full max-h-[90vh]"
-                controls
-                autoPlay
-              />
-            )}
+            <div
+              className="max-w-[90vw] max-h-[90vh] relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {isImageUrl(fullscreenMedia) ? (
+                <img
+                  src={fullscreenMedia}
+                  alt={`Fullscreen media ${currentFullscreenIndex + 1}`}
+                  className="max-w-full max-h-[90vh] object-contain"
+                />
+              ) : (
+                <video
+                  src={fullscreenMedia}
+                  className="max-w-full max-h-[90vh]"
+                  controls
+                  autoPlay
+                />
+              )}
 
-            {/* Navigation UI */}
-            <div className="absolute top-4 right-4 flex items-center gap-2">
-              <span className="text-white bg-black/50 px-3 py-1 rounded-full text-sm">
-                {currentFullscreenIndex + 1} / {mediaUrls.length}
-              </span>
-              <button
-                onClick={() => {
-                  setFullscreenMedia(null);
-                  setCurrentFullscreenIndex(-1);
-                }}
-                className="bg-gray-900/50 hover:bg-gray-900 
+              {/* Navigation UI */}
+              <div className="absolute top-4 right-4 flex items-center gap-2">
+                <span className="text-white bg-black/50 px-3 py-1 rounded-full text-sm">
+                  {currentFullscreenIndex + 1} / {mediaUrls.length}
+                </span>
+                <button
+                  onClick={() => {
+                    setFullscreenMedia(null);
+                    setCurrentFullscreenIndex(-1);
+                  }}
+                  className="bg-gray-900/50 hover:bg-gray-900 
                          rounded-full p-2 text-white transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+                >
+                  ✕
+                </button>
+              </div>
 
-            {/* Arrow buttons - only show if there's more than one media item */}
-            {mediaUrls.length > 1 && (
-              <>
-                <button
-                  onClick={() => handleNavigation("left")}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-900 
+              {/* Arrow buttons - only show if there's more than one media item */}
+              {mediaUrls.length > 1 && (
+                <>
+                  <button
+                    onClick={() => handleNavigation("left")}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-900 
                            rounded-full p-3 text-white transition-colors"
-                >
-                  ←
-                </button>
-                <button
-                  onClick={() => handleNavigation("right")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-900 
+                  >
+                    ←
+                  </button>
+                  <button
+                    onClick={() => handleNavigation("right")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-900 
                            rounded-full p-3 text-white transition-colors"
-                >
-                  →
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+                  >
+                    →
+                  </button>
+                </>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 }

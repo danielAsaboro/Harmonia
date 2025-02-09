@@ -8,7 +8,17 @@ import {
   initializeDatabase,
   DraftTweet,
   DraftThread,
+  SharedDraftComment,
+  SharedDraft,
 } from "./schema";
+
+export interface SharedDraftInfo {
+  id: string;
+  accessToken: string;
+  canComment: boolean;
+  expiresAt: string;
+  shareState: "active" | "expired" | "revoked";
+}
 
 class DatabaseService {
   private static instance: DatabaseService;
@@ -374,6 +384,136 @@ class DatabaseService {
     });
 
     transaction(id, userId);
+  }
+
+  // Create a new shared draft
+  createSharedDraft(draft: SharedDraft): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO shared_drafts 
+      (id, draftId, draftType, createdAt, expiresAt, canComment, creatorId, 
+       accessToken, authorName, authorHandle, authorProfileUrl, shareState)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      draft.id,
+      draft.draftId,
+      draft.draftType,
+      draft.createdAt,
+      draft.expiresAt,
+      draft.canComment ? 1 : 0,
+      draft.creatorId,
+      draft.accessToken,
+      draft.authorName,
+      draft.authorHandle,
+      draft.authorProfileUrl || null,
+      draft.shareState
+    );
+  }
+
+  // Get shared draft by access token
+  getSharedDraftByToken(accessToken: string): SharedDraft | null {
+    const stmt = this.db.prepare(`
+      SELECT * FROM shared_drafts 
+      WHERE accessToken = ? 
+      AND shareState = 'active'
+      AND expiresAt > datetime('now')
+    `);
+
+    const row = stmt.get(accessToken) as any;
+    if (!row) return null;
+
+    return {
+      ...row,
+      canComment: Boolean(row.canComment),
+    };
+  }
+
+  // Add a comment to a shared draft
+  addComment(comment: SharedDraftComment): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO shared_draft_comments 
+      (id, sharedDraftId, content, authorId, authorName, createdAt, position)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      comment.id,
+      comment.sharedDraftId,
+      comment.content,
+      comment.authorId,
+      comment.authorName,
+      comment.createdAt,
+      comment.position || null
+    );
+  }
+
+  // Get comments for a shared draft
+  getComments(sharedDraftId: string): SharedDraftComment[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM shared_draft_comments 
+      WHERE sharedDraftId = ? 
+      ORDER BY createdAt ASC
+    `);
+
+    return stmt.all(sharedDraftId) as SharedDraftComment[];
+  }
+
+  // Delete expired shared drafts and their comments
+  cleanupExpiredDrafts(): void {
+    const transaction = this.db.transaction(() => {
+      // Delete expired drafts (comments will be deleted via CASCADE)
+      const stmt = this.db.prepare(`
+        DELETE FROM shared_drafts 
+        WHERE expiresAt <= datetime('now')
+      `);
+      stmt.run();
+    });
+
+    transaction();
+  }
+
+  // Get existing shared draft info
+  getSharedDraftInfo(draftId: string): SharedDraftInfo | null {
+    const stmt = this.db.prepare(`
+      SELECT id, accessToken, canComment, expiresAt, shareState
+      FROM shared_drafts 
+      WHERE draftId = ? 
+      AND shareState = 'active'
+      AND expiresAt > datetime('now')
+      ORDER BY createdAt DESC 
+      LIMIT 1
+    `);
+
+    const row = stmt.get(draftId) as any;
+    if (!row) return null;
+
+    return {
+      ...row,
+      canComment: Boolean(row.canComment),
+    };
+  }
+
+  // Update share settings
+  updateSharedDraftSettings(id: string, canComment: boolean): void {
+    const stmt = this.db.prepare(`
+      UPDATE shared_drafts 
+      SET canComment = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(canComment ? 1 : 0, id);
+  }
+
+  // Revoke a shared draft
+  revokeSharedDraft(id: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE shared_drafts 
+      SET shareState = 'revoked'
+      WHERE id = ?
+    `);
+
+    stmt.run(id);
   }
 }
 

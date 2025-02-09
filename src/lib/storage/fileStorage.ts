@@ -163,7 +163,7 @@ export class FileStorage {
 
 // Create and export default instance with common config
 export const fileStorage = new FileStorage({
-  basePath: process.env.STORAGE_BASE_PATH || "./media_uploads",
+  basePath: process.env.STORAGE_BASE_PATH || "./public/media_uploads",
   allowedTypes: [
     "image/jpeg",
     "image/png",

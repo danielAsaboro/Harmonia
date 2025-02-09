@@ -16,6 +16,9 @@ async function getUserData(request: NextRequest): Promise<{
     id: string;
     name: string;
     username: string;
+    profile_image_url: string;
+    verified: boolean;
+    verified_type: string;
   };
 } | null> {
   const session = await getSession(request);
@@ -25,6 +28,7 @@ async function getUserData(request: NextRequest): Promise<{
 
   try {
     const sessionData = JSON.parse(twitterSession);
+
     if (!sessionData.userData?.id || !sessionData.tokens) return null;
 
     return {
@@ -53,13 +57,12 @@ export async function POST(req: NextRequest) {
       expiresAt: userData.tokens.expiresAt,
       username: userData.userData.username,
       name: userData.userData.name,
+      profileImageUrl: userData.userData.profile_image_url,
     });
 
     const body = await req.json();
     const { type, data } = body;
     const now = new Date().toISOString();
-
-    console.log("   ", data);
 
     if (type === "tweet") {
       const tweet = {
