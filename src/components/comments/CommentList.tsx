@@ -1,9 +1,9 @@
 // components/CommentList.tsx
-import { Comment } from "@/app/shared/[token]/page";
 import { Lock } from "lucide-react";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { CommentItem } from "./CommentItem";
+import { Comment } from "@/types/tweet";
 
 interface CommentListProps {
   comments: Comment[];

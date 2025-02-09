@@ -1,7 +1,7 @@
 // components/CommentItem.tsx
-import { Comment } from "@/app/shared/[token]/page";
 import { CheckCircle, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
+import { Comment } from "@/types/tweet";
 
 interface CommentItemProps {
   comment: Comment;
