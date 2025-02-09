@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     // Check if we have valid cached user data
     const duration = process.env.USER_CACHE_DURATION;
-    if (!duration) throw error;
+    if (!duration) throw error("couldn't fetch user cache duration");
     if (userData && now - userData.fetchedAt < parseInt(duration)) {
       return NextResponse.json(userData);
     }
