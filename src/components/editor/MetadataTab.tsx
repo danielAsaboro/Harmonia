@@ -7,7 +7,7 @@ import React, {
   useCallback,
 } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useUserAccount } from "./context/account";
 import { useEditor } from "./context/Editor";
 import { tweetStorage } from "@/utils/localStorage";
@@ -266,8 +266,8 @@ const MetadataTab: React.FC = () => {
   // };
 
   return (
-    <Card className="w-full h-full max-w-xs rounded-none">
-      <CardHeader className="pb-4 border-b border-neutral-50 ">
+    <div className="w-full h-full max-w-xs rounded-none bg-transparent border-l border-gray-800">
+      <div className="p-4 pb-4 border-b border-gray-800 ">
         <input
           type="text"
           placeholder={draftData.title}
@@ -283,8 +283,8 @@ const MetadataTab: React.FC = () => {
             <span>{formatTimeAgo(draftData.lastEdited)}</span>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="py-2 border-b border-neutral-50 ">
+      </div>
+      <div className="p-4 py-2 border-b border-gray-800 ">
         <div className="space-y-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-500">Words</span>
@@ -311,9 +311,9 @@ const MetadataTab: React.FC = () => {
             </span>
           </div>
         </div>
-      </CardContent>
+      </div>
 
-      <CardContent className="py-2 border-b border-neutral-50 ">
+      <div className="p-4 py-2 border-b border-gray-800 ">
         <div className="space-y-2">
           <p className="text-sm text-gray-500">Tags</p>
           <div className="flex flex-wrap">
@@ -322,12 +322,12 @@ const MetadataTab: React.FC = () => {
             ))}
           </div>
         </div>
-      </CardContent>
+      </div>
 
-      <CardContent className="py-4">
+      <div className="p-4 py-4">
         <UnifiedChecklist />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

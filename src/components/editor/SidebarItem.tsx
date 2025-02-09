@@ -63,7 +63,11 @@ export function SidebarItem({
     <div
       className={`
       relative p-4 cursor-pointer transition-all duration-200 border-b border-gray-800
-      ${isSelected ? "bg-gray-800 border-l border-gray-50" : "hover:bg-gray-900  "}
+      ${
+        isSelected
+          ? "bg-gray-800 border-l-4 border-gray-50 border-b-0"
+          : "hover:bg-gray-800"
+      }
     `}
     >
       <div className="flex justify-between items-start group" onClick={onClick}>
