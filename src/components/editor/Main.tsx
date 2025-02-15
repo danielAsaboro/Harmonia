@@ -33,6 +33,8 @@ import PublishingModal from "./PublishingModal";
 import ActionsMenu from "./PowerTab";
 import MentionInput from "./MentionInput";
 
+const DEFAULT_TEXTAREA_HEIGHT = "60px";
+
 //  helper function
 const repurposeTweet = (tweet: Tweet): Tweet => {
   return {
@@ -69,6 +71,7 @@ const repurposeThread = (
   newThread.tweetIds = newTweets.map((t) => t.id);
   return [newThread, newTweets];
 };
+
 const cleanupMediaAndDeleteTweet = async (
   tweetId: string,
   mediaIds: string[]
@@ -131,7 +134,6 @@ const cleanupMediaAndDeleteThread = async (threadId: string) => {
   }
 };
 
-const DEFAULT_TEXTAREA_HEIGHT = "60px";
 
 export default function PlayGround({
   draftId,
@@ -493,6 +495,7 @@ export default function PlayGround({
 
     createNewTweet(index);
   };
+
   const createNewTweet = (index: number) => {
     if (!isThread) {
       // Generate a new threadId when converting to a thread
@@ -530,6 +533,7 @@ export default function PlayGround({
       };
 
       const newTweets = [...tweets];
+      console.log("   liar  ", newTweets)
       newTweets.splice(index + 1, 0, newTweet);
       setTweets(newTweets);
     }
@@ -737,6 +741,7 @@ export default function PlayGround({
       setPublishingStatus("error");
     }
   };
+
   const handleSaveAsDraft = () => {
     if (isThread && threadId) {
       const thread: Thread = {
@@ -911,7 +916,7 @@ export default function PlayGround({
             scheduledFor: firstTweet.scheduledFor,
           };
           // Save to localStorage and queue for backend sync
-          tweetStorage.saveThread(thread, tweets);
+          tweetStorage.saveThread(thread, tweets, false);
         } else {
           // Save to localStorage and queue for backend sync
           tweetStorage.saveTweet(tweets[0]);
@@ -1220,7 +1225,7 @@ export default function PlayGround({
                     }
                   }}
                 />
-               
+
                 {/* Media Preview */}
                 {tweet.mediaIds && tweet.mediaIds.length > 0 && (
                   <div className="mt-2">

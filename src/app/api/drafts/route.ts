@@ -2,8 +2,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { db } from "@/lib/db/sqlite_db_service";
+// import { db } from "@/lib/db/sqlite_db_service";
+import {
+  draftTweetsService,
+  draftThreadsService,
+  userTokensService,
+} from "@/lib/services";
 import { fileStorage } from "@/lib/storage/fileStorage";
+import { prismaDb } from "@/lib/db/prisma_service";
 
 async function getUserData(request: NextRequest): Promise<{
   userId: string;
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Ensure user tokens exist in the database
-    db.saveUserTokens({
+    await userTokensService.saveUserTokens({
       userId: userData.userId,
       accessToken: userData.tokens.accessToken,
       refreshToken: userData.tokens.refreshToken,
@@ -64,6 +70,9 @@ export async function POST(req: NextRequest) {
     const { type, data } = body;
     const now = new Date().toISOString();
 
+    console.log("   type", type);
+    console.log("   payload", data);
+
     if (type === "tweet") {
       const tweet = {
         ...data,
@@ -72,7 +81,7 @@ export async function POST(req: NextRequest) {
         updatedAt: now,
       };
 
-      db.saveDraftTweet(tweet);
+      await draftTweetsService.saveDraftTweet(tweet);
       return NextResponse.json(tweet);
     }
 
@@ -91,7 +100,7 @@ export async function POST(req: NextRequest) {
         updatedAt: now,
       }));
 
-      db.saveDraftThread(thread, tweets);
+      await draftThreadsService.saveDraftThread(thread, tweets);
       return NextResponse.json({ thread, tweets });
     }
 
@@ -117,18 +126,23 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
 
     if (type === "tweet" && id) {
-      const tweet = db.getDraftTweet(id, userData.userId);
+      const tweet = await draftTweetsService.getDraftTweet(id, userData.userId);
       return NextResponse.json(tweet);
     }
 
     if (type === "thread" && id) {
-      const thread = db.getDraftThread(id, userData.userId);
+      const thread = await draftThreadsService.getDraftThread(
+        id,
+        userData.userId
+      );
       return NextResponse.json(thread);
     }
 
     // If no specific id, return all drafts
-    const tweets = db.getUserDraftTweets(userData.userId);
-    const threads = db.getUserDraftThreads(userData.userId);
+    const tweets = await draftTweetsService.getUserDraftTweets(userData.userId);
+    const threads = await draftThreadsService.getUserDraftThreads(
+      userData.userId
+    );
 
     return NextResponse.json({ tweets, threads });
   } catch (error) {
@@ -150,8 +164,8 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
     const id = searchParams.get("id");
-    // const cleanup = searchParams.get("cleanup") === "true";
-    const cleanup = true;
+    const cleanup = searchParams.get("cleanup") === "true";
+    // const cleanup = true;
 
     console.log("clean up is activated ", cleanup);
 
@@ -165,7 +179,10 @@ export async function DELETE(req: NextRequest) {
     if (type === "tweet") {
       if (cleanup) {
         // Get tweet's media IDs before deletion
-        const tweet = db.getDraftTweet(id, userData.userId);
+        const tweet = await draftTweetsService.getDraftTweet(
+          id,
+          userData.userId
+        );
 
         if (tweet && tweet.mediaIds) {
           // Delete media files|
@@ -177,11 +194,14 @@ export async function DELETE(req: NextRequest) {
           );
         }
       }
-      db.deleteDraftTweet(id, userData.userId);
+      await draftTweetsService.deleteDraftTweet(id, userData.userId);
     } else if (type === "thread") {
       if (cleanup) {
         // Get all tweets in thread and their media before deletion
-        const threadData = db.getDraftThread(id, userData.userId);
+        const threadData = await draftThreadsService.getDraftThread(
+          id,
+          userData.userId
+        );
         if (threadData) {
           const mediaIds = threadData.tweets
             .map((tweet) => JSON.stringify(tweet.mediaIds || "[]"))
@@ -195,7 +215,7 @@ export async function DELETE(req: NextRequest) {
           );
         }
       }
-      db.deleteDraftThread(id, userData.userId);
+      await draftThreadsService.deleteDraftThread(id, userData.userId);
     } else {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }

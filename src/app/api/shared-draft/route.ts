@@ -1,6 +1,14 @@
 // /app/api/shared-draft/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db/sqlite_db_service";
+// import { db } from "@/lib/db/sqlite_db_service";
+import {
+  draftTweetsService,
+  draftThreadsService,
+  scheduledThreadsService,
+  scheduledTweetsService,
+  userTokensService,
+  sharedDraftsService,
+} from "@/lib/services";
 import { nanoid } from "nanoid";
 import { getSession } from "@/lib/session";
 
@@ -21,7 +29,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing draftId" }, { status: 400 });
     }
 
-    const shareInfo = db.getSharedDraftInfo(draftId);
+    const shareInfo = await sharedDraftsService.getSharedDraftInfo(draftId);
 
     return NextResponse.json({ shareInfo });
   } catch (error) {
@@ -55,12 +63,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Check for existing active share
-    const existingShare = db.getSharedDraftInfo(draftId);
+    const existingShare = await sharedDraftsService.getSharedDraftInfo(draftId);
 
     if (existingShare) {
       // Update settings if they changed
       if (existingShare.canComment !== canComment) {
-        db.updateSharedDraftSettings(existingShare.id, canComment);
+        await sharedDraftsService.updateSharedDraftSettings(
+          existingShare.id,
+          canComment
+        );
       }
 
       return NextResponse.json({
@@ -90,7 +101,7 @@ export async function POST(req: NextRequest) {
       authorProfileUrl: userData.profile_image_url, // Optional field
     };
 
-    db.createSharedDraft(sharedDraft);
+    await sharedDraftsService.createSharedDraft(sharedDraft);
 
     return NextResponse.json({
       sharedDraftId: sharedDraft.accessToken,
@@ -116,10 +127,10 @@ export async function DELETE(req: NextRequest) {
     }
 
     const { draftId } = await req.json();
-    const shareInfo = db.getSharedDraftInfo(draftId);
+    const shareInfo = await sharedDraftsService.getSharedDraftInfo(draftId);
 
     if (shareInfo) {
-      db.revokeSharedDraft(shareInfo.id);
+      await sharedDraftsService.revokeSharedDraft(shareInfo.id);
     }
 
     return NextResponse.json({ success: true });

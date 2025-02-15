@@ -1,6 +1,15 @@
 // /app/api/shared-draft/[token]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db/sqlite_db_service";
+// import { db } from "@/lib/db/sqlite_db_service";
+import {
+  draftTweetsService,
+  draftThreadsService,
+  scheduledThreadsService,
+  scheduledTweetsService,
+  userTokensService,
+  sharedDraftsService,
+  sharedDraftCommentsService,
+} from "@/lib/services";
 
 export async function GET(
   req: NextRequest,
@@ -9,7 +18,7 @@ export async function GET(
   try {
     const { token } = await params;
     // First, get the shared draft info using the access token
-    const sharedDraft = db.getSharedDraftByToken(token);
+    const sharedDraft = await sharedDraftsService.getSharedDraftByToken(token);
 
     if (!sharedDraft) {
       return NextResponse.json(
@@ -19,7 +28,9 @@ export async function GET(
     }
 
     // Get the author's information from user_tokens
-    const authorTokens = db.getUserTokens(sharedDraft.creatorId);
+    const authorTokens = await userTokensService.getUserTokens(
+      sharedDraft.creatorId
+    );
     if (!authorTokens) {
       return NextResponse.json(
         { error: "Author information not found" },
@@ -30,7 +41,10 @@ export async function GET(
     // Then get the actual draft content based on type
     let draft;
     if (sharedDraft.draftType === "tweet") {
-      draft = db.getDraftTweet(sharedDraft.draftId, sharedDraft.creatorId);
+      draft = await draftTweetsService.getDraftTweet(
+        sharedDraft.draftId,
+        sharedDraft.creatorId
+      );
       if (draft) {
         draft = {
           ...draft,
@@ -40,7 +54,7 @@ export async function GET(
         };
       }
     } else {
-      const threadData = db.getDraftThread(
+      const threadData = await draftThreadsService.getDraftThread(
         sharedDraft.draftId,
         sharedDraft.creatorId
       );
@@ -72,7 +86,7 @@ export async function GET(
 
     // Get comments if enabled
     const comments = sharedDraft.canComment
-      ? db.getComments(sharedDraft.id)
+      ? await sharedDraftCommentsService.getComments(sharedDraft.id)
       : [];
 
     return NextResponse.json({

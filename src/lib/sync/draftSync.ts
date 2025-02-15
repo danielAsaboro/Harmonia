@@ -14,7 +14,7 @@ class DraftSyncService {
   private pendingSyncs: Map<string, PendingSync> = new Map();
   private syncInterval: NodeJS.Timeout | null = null;
   // private SYNC_INTERVAL = 15 * 1000; // 15 seconds for testing
-  private SYNC_INTERVAL = 3 * 60 * 1000; // 3 minutes in milliseconds
+  private SYNC_INTERVAL = 0.1 * 60 * 1000; // 3 minutes in milliseconds
   private isSyncing = false;
 
   private constructor() {
@@ -49,13 +49,35 @@ class DraftSyncService {
       for (const sync of syncsArray) {
         if (sync.type === "tweet") {
           const tweet = tweetStorage.getTweets().find((t) => t.id === sync.id);
-          if (tweet) {
+          if (tweet && !tweet.threadId) {
+            // Only sync standalone tweets
+            console.log("doesn't have an id");
             await this.syncTweetToBackend(tweet);
+          } else if (tweet && tweet.threadId) {
+            console.log("has an id");
+
+            // If it has a threadId, we should sync the entire thread instead
+            const thread = tweetStorage.getThreadWithTweets(tweet.threadId);
+            console.log(" is thread or not 1", thread);
+
+            if (thread) {
+              console.log("about to sync thread to backend 1");
+
+              await this.syncThreadToBackend(thread);
+              console.log("finished syncing thread to backend 1");
+            }
           }
         } else {
-          const thread = tweetStorage.getThreadWithTweets(sync.id);
-          if (thread) {
-            await this.syncThreadToBackend(thread);
+          const tweet = tweetStorage.getTweets().find((t) => t.id === sync.id);
+          if (tweet) {
+            const thread = tweetStorage.getThreadWithTweets(tweet.threadId!);
+            console.log(" is thread or not 2", thread);
+            if (thread) {
+              console.log("about to sync thread to backend 2");
+
+              await this.syncThreadToBackend(thread);
+              console.log("finished syncing thread to backend 2");
+            }
           }
         }
       }
