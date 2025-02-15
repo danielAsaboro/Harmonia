@@ -115,12 +115,12 @@ function TwitterEditorContent() {
   const { editorState, isMetadataTabVisible } = useEditor();
   const { isLoading } = useUserAccount();
 
-  const userAccount = useUserAccount();
-  // console.log("User Account Context:", userAccount);
+  // const userAccount = useUserAccount();
+  // // console.log("User Account Context:", userAccount);
 
-  useEffect(() => {
-    console.log("Current user account loading state:", userAccount.isLoading);
-  }, [userAccount]);
+  // useEffect(() => {
+  //   // console.log("Current user account loading state:", userAccount.isLoading);
+  // }, [userAccount]);
 
   if (isLoading) {
     return <LoadingState />;

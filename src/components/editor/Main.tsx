@@ -33,6 +33,8 @@ import PublishingModal from "./PublishingModal";
 import ActionsMenu from "./PowerTab";
 import MentionInput from "./MentionInput";
 
+const DEFAULT_TEXTAREA_HEIGHT = "60px";
+
 //  helper function
 const repurposeTweet = (tweet: Tweet): Tweet => {
   return {
@@ -131,8 +133,6 @@ const cleanupMediaAndDeleteThread = async (threadId: string) => {
     throw error;
   }
 };
-
-const DEFAULT_TEXTAREA_HEIGHT = "60px";
 
 interface PageContent {
   threadId?: string;
@@ -528,84 +528,99 @@ export default function PlayGround({
   };
 
   const addTweetToThread = (index: number) => {
-    if (activeTab != "drafts") return;
+    if (activeTab !== "drafts") return;
 
-    if (!pageContent.isThread) {
-      // Generate a new threadId when converting to a thread
-      const newThreadId = `thread-${uuidv4()}`;
+    try {
+      if (!pageContent.isThread) {
+        // Generate a new threadId when converting to a thread
+        const newThreadId = `thread-${uuidv4()}`;
 
-      // Create initial thread structure with first tweet properly threaded
-      const updatedFirstTweet = {
-        ...pageContent.tweets[0],
-        threadId: newThreadId,
-        position: 0,
-      };
+        // Create initial thread structure with first tweet properly threaded
+        const updatedFirstTweet = {
+          ...pageContent.tweets[0],
+          threadId: newThreadId,
+          position: 0,
+        };
 
-      // Create new tweet
-      const newTweet = {
-        id: `tweet-${uuidv4()}`,
-        content: "",
-        mediaIds: [],
-        createdAt: new Date(),
-        status: "draft" as const,
-        threadId: newThreadId,
-        position: 1,
-      };
+        // Create new tweet
+        const newTweet = {
+          id: `tweet-${uuidv4()}`,
+          content: "",
+          mediaIds: [],
+          createdAt: new Date(),
+          status: "draft" as const,
+          threadId: newThreadId,
+          position: 1,
+        };
 
-      // Update state with both tweets
-      setPageContent({
-        isThread: true,
-        threadId: newThreadId,
-        tweets: [updatedFirstTweet, newTweet],
-      });
+        // Update state with both tweets
+        setPageContent({
+          isThread: true,
+          threadId: newThreadId,
+          tweets: [updatedFirstTweet, newTweet],
+        });
 
-      // Save thread
-      const thread: Thread = {
-        id: newThreadId,
-        tweetIds: [updatedFirstTweet.id, newTweet.id],
-        createdAt: new Date(),
-        status: "draft",
-      };
-      tweetStorage.saveThread(thread, [updatedFirstTweet, newTweet], true);
-    } else {
-      // For existing threads, just add new tweet
-      const newTweet = {
-        id: `tweet-${uuidv4()}`,
-        content: "",
-        mediaIds: [],
-        createdAt: new Date(),
-        status: "draft" as const,
-        threadId: pageContent.threadId,
-        position: index + 1,
-      };
+        // Save thread
+        const thread: Thread = {
+          id: newThreadId,
+          tweetIds: [updatedFirstTweet.id, newTweet.id],
+          createdAt: new Date(),
+          status: "draft",
+        };
+        tweetStorage.saveThread(thread, [updatedFirstTweet, newTweet], true);
+      } else {
+        // For existing threads, add new tweet and reindex positions
+        const newTweet = {
+          id: `tweet-${uuidv4()}`,
+          content: "",
+          mediaIds: [],
+          createdAt: new Date(),
+          status: "draft" as const,
+          threadId: pageContent.threadId,
+          position: index + 1,
+        };
 
-      const newTweets = [...pageContent.tweets];
-      newTweets.splice(index + 1, 0, newTweet);
+        const newTweets = [...pageContent.tweets];
 
-      setPageContent({
-        isThread: true,
-        threadId: pageContent.threadId,
-        tweets: newTweets,
-      });
+        // Insert the new tweet at the specified position
+        newTweets.splice(index + 1, 0, newTweet);
 
-      // Save updated thread
-      const thread: Thread = {
-        id: pageContent.threadId!,
-        tweetIds: newTweets.map((t) => t.id),
-        createdAt: new Date(),
-        status: "draft",
-      };
-      tweetStorage.saveThread(thread, newTweets, true);
-    }
-    refreshSidebar();
+        // Reindex all positions to ensure consistency
+        const reindexedTweets = newTweets.map((tweet, idx) => ({
+          ...tweet,
+          position: idx,
+        }));
 
-    // Focus the new textarea after state update
-    setTimeout(() => {
-      const nextTextarea = textareaRefs.current[index + 1];
-      if (nextTextarea) {
-        nextTextarea.focus();
+        // Update state with reindexed tweets
+        setPageContent({
+          isThread: true,
+          threadId: pageContent.threadId,
+          tweets: reindexedTweets,
+        });
+
+        // Save updated thread
+        const thread: Thread = {
+          id: pageContent.threadId!,
+          tweetIds: reindexedTweets.map((t) => t.id),
+          createdAt: new Date(),
+          status: "draft",
+        };
+        tweetStorage.saveThread(thread, reindexedTweets, true);
       }
-    }, 0);
+
+      refreshSidebar();
+
+      // Focus the new textarea after state update
+      setTimeout(() => {
+        const nextTextarea = textareaRefs.current[index + 1];
+        if (nextTextarea) {
+          nextTextarea.focus();
+        }
+      }, 0);
+    } catch (error) {
+      console.error("Error adding tweet to thread:", error);
+      alert("Failed to add tweet to thread. Please try again.");
+    }
   };
 
   const handleSchedulePost = async (scheduledDate: Date) => {

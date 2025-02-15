@@ -135,7 +135,7 @@ export class TweetStorageService {
         threads.push(thread);
       }
 
-      // Save thread to localStorage with debounce
+      // Save thread to localStorage first
       localStorage.setItem(this.THREADS_KEY, JSON.stringify(threads));
       this.lastSave = Date.now();
 

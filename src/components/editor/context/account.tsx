@@ -75,7 +75,7 @@ export function UserAccountProvider({
       // First check localStorage
       const cachedDetails = tweetStorage.getUserDetails();
 
-      console.log("cached details gotten ", cachedDetails);
+      // console.log("cached details gotten ", cachedDetails);
 
       if (cachedDetails) {
         setUserAccount({

@@ -1,151 +1,132 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model UserTokens {
-  id              String            @id @map("userId")
-  accessToken     String
-  refreshToken    String
-  expiresAt       DateTime
-  username        String
-  name            String
-  profileImageUrl String?
-  scheduledTweets ScheduledTweet[]
-  scheduledThreads ScheduledThread[]
-  draftTweets     DraftTweet[]
-  draftThreads    DraftThread[]
-  sharedDrafts    SharedDraft[]
-  comments        SharedDraftComment[]
-
-  @@map("user_tokens")
+generator client {
+  provider = "prisma-client-js"
 }
 
-model ScheduledTweet {
-  id           String   @id
+model user_tokens {
+  userId            String                 @id
+  accessToken       String
+  refreshToken      String
+  expiresAt         String
+  username          String
+  name              String
+  profileImageUrl   String?
+  draftThreads      draft_threads[]
+  draftTweets       draft_tweets[]
+  scheduledThreads  scheduled_threads[]
+  scheduledTweets   scheduled_tweets[]
+  sharedDraftComments shared_draft_comments[]
+  sharedDrafts      shared_drafts[]
+
+  @@unique([accessToken])
+}
+
+model scheduled_tweets {
+  id           String     @id
   content      String
-  mediaIds     Json     // Array of strings
-  scheduledFor DateTime
+  mediaIds     String?
+  scheduledFor String
   threadId     String?
   position     Int?
-  status       TweetStatus
-  createdAt    DateTime
+  status       String
+  createdAt    String
   error        String?
   userId       String
-  user         UserTokens @relation(fields: [userId], references: [id])
+  user         user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  thread       scheduled_threads? @relation(fields: [threadId], references: [id], onDelete: SetNull)
 
-  @@index([scheduledFor])
   @@index([userId])
-  @@map("scheduled_tweets")
+  @@index([scheduledFor])
 }
 
-model ScheduledThread {
-  id           String   @id
-  tweetIds     Json     // Array of strings
-  scheduledFor DateTime
-  status       TweetStatus
-  createdAt    DateTime
+model scheduled_threads {
+  id           String     @id
+  tweetIds     String
+  scheduledFor String
+  status       String
+  createdAt    String
   error        String?
   userId       String
-  user         UserTokens @relation(fields: [userId], references: [id])
+  user         user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  tweets       scheduled_tweets[]
 
-  @@index([scheduledFor])
   @@index([userId])
-  @@map("scheduled_threads")
+  @@index([scheduledFor])
 }
 
-model DraftTweet {
-  id           String   @id
-  content      String
-  mediaIds     Json     // Array of strings
-  createdAt    DateTime
-  updatedAt    DateTime
-  status       TweetStatus
-  threadId     String?
-  position     Int?
-  tags         Json     // Array of strings
-  userId       String
-  user         UserTokens @relation(fields: [userId], references: [id])
+model draft_tweets {
+  id          String     @id
+  content     String
+  mediaIds    String?
+  createdAt   String
+  updatedAt   String
+  status      String
+  threadId    String?
+  position    Int?
+  tags        String?
+  userId      String
+  user        user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  thread      draft_threads? @relation(fields: [threadId], references: [id], onDelete: SetNull)
 
-  @@index([userId])
   @@index([threadId])
-  @@map("draft_tweets")
+  @@index([userId])
 }
 
-model DraftThread {
-  id           String   @id
-  tweetIds     Json     // Array of strings
-  createdAt    DateTime
-  updatedAt    DateTime
-  status       TweetStatus
-  tags         Json     // Array of strings
-  userId       String
-  user         UserTokens @relation(fields: [userId], references: [id])
+model draft_threads {
+  id          String     @id
+  tweetIds    String
+  createdAt   String
+  updatedAt   String
+  status      String
+  tags        String?
+  userId      String
+  user        user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  tweets      draft_tweets[]
 
   @@index([userId])
-  @@map("draft_threads")
 }
 
-model SharedDraft {
-  id              String   @id
-  draftId         String
-  draftType       DraftType
-  createdAt       DateTime
-  expiresAt       DateTime
-  canComment      Boolean  @default(false)
-  creatorId       String
-  accessToken     String   @unique
-  authorName      String
-  authorHandle    String
-  authorProfileUrl String?
-  shareState      ShareState @default(active)
-  creator         UserTokens @relation(fields: [creatorId], references: [id])
-  comments        SharedDraftComment[]
+model shared_drafts {
+  id                String                 @id
+  draftId           String
+  draftType         String
+  createdAt         String
+  expiresAt         String
+  canComment        Boolean                @default(false)
+  creatorId         String
+  accessToken       String                 @unique
+  authorName        String
+  authorHandle      String
+  authorProfileUrl  String?
+  shareState        String                 @default("active")
+  comments          shared_draft_comments[]
+  creator           user_tokens             @relation(fields: [creatorId], references: [userId], onDelete: Cascade)
 
-  @@index([creatorId])
-  @@index([accessToken])
   @@index([draftId])
-  @@map("shared_drafts")
+  @@index([accessToken])
+  @@index([creatorId])
 }
 
-model SharedDraftComment {
-  id            String   @id
+model shared_draft_comments {
+  id            String       @id
   sharedDraftId String
   content       String
   authorId      String?
   authorName    String
-  createdAt     DateTime
+  createdAt     String
   position      Int?
-  metadata      Json     // Comment metadata
-  resolved      Boolean  @default(false)
-  resolvedAt    DateTime?
+  metadata      String       @default("{}")
+  resolved      Boolean      @default(false)
+  resolvedAt    String?
   resolvedBy    String?
-  sharedDraft   SharedDraft @relation(fields: [sharedDraftId], references: [id], onDelete: Cascade)
-  author        UserTokens? @relation(fields: [authorId], references: [id])
+  author        user_tokens? @relation(fields: [authorId], references: [userId], onDelete: SetNull)
+  sharedDraft   shared_drafts @relation(fields: [sharedDraftId], references: [id], onDelete: Cascade)
 
-  @@index([sharedDraftId])
-  @@index([authorId])
   @@index([resolved])
-  @@map("shared_draft_comments")
-}
-
-enum TweetStatus {
-  scheduled
-  published
-  failed
-}
-
-enum DraftType {
-  tweet
-  thread
-}
-
-enum ShareState {
-  active
-  expired
-  revoked
+  @@index([authorId])
+  @@index([sharedDraftId])
 }

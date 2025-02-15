@@ -29,3 +29,17 @@ export async function getSession(request: NextRequest) {
     },
   };
 }
+
+export async function getUserFromSession(): Promise<TwitterUserData | null> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("twitter_session");
+
+  if (!sessionCookie?.value) return null;
+
+  try {
+    const sessionData = JSON.parse(sessionCookie.value) as TwitterSessionData;
+    return sessionData.userData;
+  } catch {
+    return null;
+  }
+}

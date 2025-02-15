@@ -111,7 +111,7 @@ class DatabaseService {
     );
   }
 
-  getPendingTweets(beforeDate: Date): ScheduledTweet[] {
+  getPendingScheduledTweets(beforeDate: Date): ScheduledTweet[] {
     const stmt = this.db.prepare(`
       SELECT 
         t.*,
@@ -137,7 +137,7 @@ class DatabaseService {
     }));
   }
 
-  getPendingThreads(beforeDate: Date): ScheduledThread[] {
+  getPendingScheduledThreads(beforeDate: Date): ScheduledThread[] {
     const stmt = this.db.prepare(`
       SELECT 
         t.*,

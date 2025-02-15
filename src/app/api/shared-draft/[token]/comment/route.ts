@@ -1,22 +1,18 @@
 // /app/api/shared-draft/[token]/comment/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db/sqlite_db_service";
+// import { db } from "@/lib/db/sqlite_db_service";
+import {
+  draftTweetsService,
+  draftThreadsService,
+  scheduledThreadsService,
+  sharedDraftCommentsService,
+  sharedDraftsService,
+  scheduledTweetsService,
+  userTokensService,
+} from "@/lib/services";
 import { nanoid } from "nanoid";
 import { cookies } from "next/headers";
-
-export async function getUserFromSession(): Promise<TwitterUserData | null> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("twitter_session");
-
-  if (!sessionCookie?.value) return null;
-
-  try {
-    const sessionData = JSON.parse(sessionCookie.value) as TwitterSessionData;
-    return sessionData.userData;
-  } catch {
-    return null;
-  }
-}
+import { getUserFromSession } from "@/lib/session";
 
 export async function POST(
   request: NextRequest,
@@ -27,7 +23,7 @@ export async function POST(
     const user = await getUserFromSession();
     const body = await request.json();
 
-    const draft = db.getSharedDraftByToken(token);
+    const draft = await sharedDraftsService.getSharedDraftByToken(token);
     if (!draft) {
       return NextResponse.json({ error: "Draft not found" }, { status: 404 });
     }
@@ -50,7 +46,7 @@ export async function POST(
       resolved: false,
     };
 
-    db.addComment(comment);
+    await sharedDraftCommentsService.addComment(comment);
     return NextResponse.json({ comment });
   } catch (error) {
     console.error("Error adding comment:", error);

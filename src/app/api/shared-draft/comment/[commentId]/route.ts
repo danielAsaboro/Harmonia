@@ -1,7 +1,15 @@
 // /app/api/shared-draft/comment/[commentId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db/sqlite_db_service";
-import { getUserFromSession } from "../../[token]/comment/route";
+// import { db } from "@/lib/db/sqlite_db_service";
+import {
+  draftTweetsService,
+  draftThreadsService,
+  scheduledThreadsService,
+  scheduledTweetsService,
+  userTokensService,
+  sharedDraftCommentsService,
+} from "@/lib/services";
+import { getUserFromSession } from "@/lib/session";
 
 export async function DELETE(
   request: NextRequest,
@@ -14,11 +22,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!db.canModifyComment(commentId, user.id)) {
+    if (
+      !(await sharedDraftCommentsService.canModifyComment(commentId, user.id))
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    db.deleteComment(commentId);
+    await sharedDraftCommentsService.deleteComment(commentId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting comment:", error);
@@ -40,13 +50,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!db.canModifyComment(commentId, user.id)) {
+    if (
+      !(await sharedDraftCommentsService.canModifyComment(commentId, user.id))
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
     if (body.resolved) {
-      db.resolveComment(commentId, user.id);
+      await sharedDraftCommentsService.resolveComment(commentId, user.id);
     }
 
     return NextResponse.json({ success: true });
