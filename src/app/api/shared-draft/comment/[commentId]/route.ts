@@ -1,6 +1,6 @@
 // /app/api/shared-draft/comment/[commentId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/sqlite_db_service";
 import { getUserFromSession } from "../../[token]/comment/route";
 
 export async function DELETE(

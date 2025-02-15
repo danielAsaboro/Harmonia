@@ -1,6 +1,6 @@
 // /app/api/shared-draft/[token]/comment/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/sqlite_db_service";
 import { nanoid } from "nanoid";
 import { cookies } from "next/headers";
 

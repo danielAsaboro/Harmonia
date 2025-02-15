@@ -1,6 +1,6 @@
 // /app/api/shared-draft/[token]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/sqlite_db_service";
 
 export async function GET(
   req: NextRequest,

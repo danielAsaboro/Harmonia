@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserTokens {
+  id              String            @id @map("userId")
+  accessToken     String
+  refreshToken    String
+  expiresAt       DateTime
+  username        String
+  name            String
+  profileImageUrl String?
+  scheduledTweets ScheduledTweet[]
+  scheduledThreads ScheduledThread[]
+  draftTweets     DraftTweet[]
+  draftThreads    DraftThread[]
+  sharedDrafts    SharedDraft[]
+  comments        SharedDraftComment[]
+
+  @@map("user_tokens")
+}
+
+model ScheduledTweet {
+  id           String   @id
+  content      String
+  mediaIds     Json     // Array of strings
+  scheduledFor DateTime
+  threadId     String?
+  position     Int?
+  status       TweetStatus
+  createdAt    DateTime
+  error        String?
+  userId       String
+  user         UserTokens @relation(fields: [userId], references: [id])
+
+  @@index([scheduledFor])
+  @@index([userId])
+  @@map("scheduled_tweets")
+}
+
+model ScheduledThread {
+  id           String   @id
+  tweetIds     Json     // Array of strings
+  scheduledFor DateTime
+  status       TweetStatus
+  createdAt    DateTime
+  error        String?
+  userId       String
+  user         UserTokens @relation(fields: [userId], references: [id])
+
+  @@index([scheduledFor])
+  @@index([userId])
+  @@map("scheduled_threads")
+}
+
+model DraftTweet {
+  id           String   @id
+  content      String
+  mediaIds     Json     // Array of strings
+  createdAt    DateTime
+  updatedAt    DateTime
+  status       TweetStatus
+  threadId     String?
+  position     Int?
+  tags         Json     // Array of strings
+  userId       String
+  user         UserTokens @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([threadId])
+  @@map("draft_tweets")
+}
+
+model DraftThread {
+  id           String   @id
+  tweetIds     Json     // Array of strings
+  createdAt    DateTime
+  updatedAt    DateTime
+  status       TweetStatus
+  tags         Json     // Array of strings
+  userId       String
+  user         UserTokens @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("draft_threads")
+}
+
+model SharedDraft {
+  id              String   @id
+  draftId         String
+  draftType       DraftType
+  createdAt       DateTime
+  expiresAt       DateTime
+  canComment      Boolean  @default(false)
+  creatorId       String
+  accessToken     String   @unique
+  authorName      String
+  authorHandle    String
+  authorProfileUrl String?
+  shareState      ShareState @default(active)
+  creator         UserTokens @relation(fields: [creatorId], references: [id])
+  comments        SharedDraftComment[]
+
+  @@index([creatorId])
+  @@index([accessToken])
+  @@index([draftId])
+  @@map("shared_drafts")
+}
+
+model SharedDraftComment {
+  id            String   @id
+  sharedDraftId String
+  content       String
+  authorId      String?
+  authorName    String
+  createdAt     DateTime
+  position      Int?
+  metadata      Json     // Comment metadata
+  resolved      Boolean  @default(false)
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  sharedDraft   SharedDraft @relation(fields: [sharedDraftId], references: [id], onDelete: Cascade)
+  author        UserTokens? @relation(fields: [authorId], references: [id])
+
+  @@index([sharedDraftId])
+  @@index([authorId])
+  @@index([resolved])
+  @@map("shared_draft_comments")
+}
+
+enum TweetStatus {
+  scheduled
+  published
+  failed
+}
+
+enum DraftType {
+  tweet
+  thread
+}
+
+enum ShareState {
+  active
+  expired
+  revoked
+}

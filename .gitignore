@@ -40,6 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 collection
+*collection
 copyFiles.js
 test.json
 filtered_superteam_followed_list.json

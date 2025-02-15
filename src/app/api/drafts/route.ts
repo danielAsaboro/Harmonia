@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/sqlite_db_service";
 import { fileStorage } from "@/lib/storage/fileStorage";
 
 async function getUserData(request: NextRequest): Promise<{
