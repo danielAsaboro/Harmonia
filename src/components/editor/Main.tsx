@@ -69,6 +69,7 @@ const repurposeThread = (
   newThread.tweetIds = newTweets.map((t) => t.id);
   return [newThread, newTweets];
 };
+
 const cleanupMediaAndDeleteTweet = async (
   tweetId: string,
   mediaIds: string[]
@@ -133,6 +134,12 @@ const cleanupMediaAndDeleteThread = async (threadId: string) => {
 
 const DEFAULT_TEXTAREA_HEIGHT = "60px";
 
+interface PageContent {
+  threadId?: string;
+  isThread: boolean;
+  tweets: Tweet[];
+}
+
 export default function PlayGround({
   draftId,
   draftType,
@@ -156,7 +163,6 @@ export default function PlayGround({
   const [isLoading, setIsLoading] = useState(true);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [tweets, setTweets] = useState<Tweet[]>([]);
   const [saveState, setSaveState] = useState<SaveState>({
     lastSaveAttempt: null,
     lastSuccessfulSave: null,
@@ -164,8 +170,13 @@ export default function PlayGround({
     errorCount: 0,
     isProcessing: false,
   });
-  const [isThread, setIsThread] = useState(false);
-  const [threadId, setThreadId] = useState<string | null>(null);
+
+  const [pageContent, setPageContent] = useState<PageContent>({
+    isThread: false,
+    tweets: [],
+    threadId: undefined,
+  });
+
   const textareaRefs = useRef<HTMLTextAreaElement[]>([]);
   const [currentlyEditedTweet, setCurrentlyEditedTweet] = useState<number>(0);
   const [contentChanged, setContentChanged] = useState(false);
@@ -176,16 +187,18 @@ export default function PlayGround({
 
   const validateTweets = (): boolean => {
     const MAX_CHARS = 280;
-    const invalidTweets = tweets.filter(
+    const invalidTweets = pageContent.tweets.filter(
       (tweet) => tweet.content.length > MAX_CHARS
     );
 
     if (invalidTweets.length > 0) {
       // Find first invalid tweet position
       const position =
-        tweets.findIndex((tweet) => tweet.content.length > MAX_CHARS) + 1;
+        pageContent.tweets.findIndex(
+          (tweet) => tweet.content.length > MAX_CHARS
+        ) + 1;
       const message =
-        tweets.length > 1
+        pageContent.tweets.length > 1
           ? `Tweet ${position} exceeds ${MAX_CHARS} characters`
           : `Tweet exceeds ${MAX_CHARS} characters`;
 
@@ -197,7 +210,9 @@ export default function PlayGround({
 
   const validateTweetsLength = (): boolean => {
     const MAX_CHARS = 280;
-    return !tweets.some((tweet) => tweet.content.length > MAX_CHARS);
+    return !pageContent.tweets.some(
+      (tweet) => tweet.content.length > MAX_CHARS
+    );
   };
 
   const ensureUniqueIds = (tweetsArray: Tweet[]): Tweet[] => {
@@ -217,14 +232,11 @@ export default function PlayGround({
   const handleTweetChange = (index: number, newContent: string) => {
     if (activeTab != "drafts") return;
 
-    const newTweets = [...tweets];
+    const newTweets = [...pageContent.tweets];
     newTweets[index] = {
       ...newTweets[index],
       content: newContent,
     };
-
-    setTweets(ensureUniqueIds(newTweets));
-    setContentChanged(true);
 
     // Adjust height of changed textarea
     const textarea = textareaRefs.current[index];
@@ -232,9 +244,9 @@ export default function PlayGround({
       adjustTextareaHeight(textarea);
     }
 
-    if (isThread && threadId) {
+    if (pageContent.isThread && pageContent.threadId) {
       const thread: Thread = {
-        id: threadId,
+        id: pageContent.threadId,
         tweetIds: newTweets.map((t) => t.id),
         createdAt: new Date(),
         status: "draft",
@@ -243,17 +255,25 @@ export default function PlayGround({
     } else {
       tweetStorage.saveTweet(newTweets[0], false);
     }
+
+    setContentChanged(true);
+    setPageContent((prev) => ({
+      isThread: prev.isThread,
+      threadId: prev.threadId,
+      tweets: ensureUniqueIds(newTweets),
+    }));
+    refreshSidebar();
   };
 
   const handleDeleteTweet = async (index: number) => {
     try {
-      const newTweets = [...tweets];
+      const newTweets = [...pageContent.tweets];
       const tweetToDelete = newTweets[index];
 
       // Track all media to delete
       const mediaToDelete = tweetToDelete.mediaIds || [];
 
-      if (tweets.length === 1) {
+      if (pageContent.tweets.length === 1) {
         // For the last tweet in any context (thread or standalone)
         const currentId = newTweets[0].id;
         const resetTweet = {
@@ -268,19 +288,26 @@ export default function PlayGround({
         };
 
         // If it was part of a thread, clean up thread
-        if (threadId) {
-          await cleanupMediaAndDeleteThread(threadId);
-          setThreadId(null);
-          setIsThread(false);
+        if (pageContent.threadId) {
+          await cleanupMediaAndDeleteThread(pageContent.threadId);
         } else {
           // Delete single tweet and its media
           await cleanupMediaAndDeleteTweet(tweetToDelete.id, mediaToDelete);
         }
 
         // Update local state and save
-        setTweets([resetTweet]);
+        setPageContent((prev) => ({
+          isThread: false,
+          threadId: undefined,
+          tweets: [resetTweet],
+        }));
+
         tweetStorage.saveTweet(resetTweet, true);
-      } else if (tweets.length === 2 && isThread && threadId) {
+      } else if (
+        pageContent.tweets.length === 2 &&
+        pageContent.isThread &&
+        pageContent.threadId
+      ) {
         // When we're about to delete one tweet from a two-tweet thread
         newTweets.splice(index, 1);
 
@@ -292,16 +319,18 @@ export default function PlayGround({
         };
 
         // Clean up the thread and media
-        await cleanupMediaAndDeleteThread(threadId);
+        await cleanupMediaAndDeleteThread(pageContent.threadId);
 
         // Save the remaining tweet as standalone
         tweetStorage.saveTweet(remainingTweet, true);
 
         // Update state
-        setTweets([remainingTweet]);
-        setThreadId(null);
-        setIsThread(false);
-      } else if (isThread && threadId) {
+        setPageContent((prev) => ({
+          isThread: false,
+          threadId: undefined,
+          tweets: [remainingTweet],
+        }));
+      } else if (pageContent.isThread && pageContent.threadId) {
         // For threads with more than 2 tweets
         // Remove the tweet from array
         newTweets.splice(index, 1);
@@ -317,14 +346,18 @@ export default function PlayGround({
 
         // Update thread in storage with new tweet arrangement
         const thread = {
-          id: threadId,
+          id: pageContent.threadId,
           tweetIds: updatedTweets.map((t) => t.id),
           createdAt: new Date(),
           status: "draft" as const,
         };
 
         // Update local state
-        setTweets(updatedTweets);
+        setPageContent((prev) => ({
+          isThread: prev.isThread,
+          threadId: prev.threadId,
+          tweets: updatedTweets,
+        }));
 
         // Save updated thread and tweets
         tweetStorage.saveThread(thread, updatedTweets, true);
@@ -332,7 +365,11 @@ export default function PlayGround({
         // For standalone tweets
         await cleanupMediaAndDeleteTweet(tweetToDelete.id, mediaToDelete);
         newTweets.splice(index, 1);
-        setTweets(newTweets);
+        setPageContent((prev) => ({
+          isThread: prev.isThread,
+          threadId: prev.threadId,
+          tweets: newTweets,
+        }));
       }
 
       refreshSidebar();
@@ -343,7 +380,7 @@ export default function PlayGround({
   };
 
   const handleMediaUpload = async (tweetIndex: number, files: File[]) => {
-    const newTweets = [...tweets];
+    const newTweets = [...pageContent.tweets];
     const currentMedia = newTweets[tweetIndex].mediaIds || [];
     const totalFiles = currentMedia.length + files.length;
 
@@ -386,13 +423,17 @@ export default function PlayGround({
       };
 
       // Save the updated tweets
-      setTweets(newTweets);
+      setPageContent((prev) => ({
+        isThread: prev.isThread,
+        threadId: prev.threadId,
+        tweets: newTweets,
+      }));
       setContentChanged(true);
 
       // If it's a thread, save with thread context
-      if (isThread && threadId) {
+      if (pageContent.isThread && pageContent.threadId) {
         const thread: Thread = {
-          id: threadId,
+          id: pageContent.threadId,
           tweetIds: newTweets.map((t) => t.id),
           createdAt: new Date(),
           status: "draft",
@@ -409,35 +450,35 @@ export default function PlayGround({
   };
 
   // function to handle media preview from both backend and IndexedDB
-  const getMediaPreviewUrl = async (mediaId: string): Promise<string> => {
-    try {
-      // First try to get from IndexedDB
-      const cachedMedia = await getMediaFile(mediaId);
-      if (cachedMedia) {
-        return cachedMedia;
-      }
+  // const getMediaPreviewUrl = async (mediaId: string): Promise<string> => {
+  //   try {
+  //     // First try to get from IndexedDB
+  //     const cachedMedia = await getMediaFile(mediaId);
+  //     if (cachedMedia) {
+  //       return cachedMedia;
+  //     }
 
-      // If not in IndexedDB, fetch from backend
-      const response = await fetch(`/api/media/upload?id=${mediaId}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch media");
-      }
+  //     // If not in IndexedDB, fetch from backend
+  //     const response = await fetch(`/api/media/upload?id=${mediaId}`);
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch media");
+  //     }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+  //     const blob = await response.blob();
+  //     const url = URL.createObjectURL(blob);
 
-      // Cache in IndexedDB for future use
-      await storeMediaFile(mediaId, new File([blob], mediaId));
+  //     // Cache in IndexedDB for future use
+  //     await storeMediaFile(mediaId, new File([blob], mediaId));
 
-      return url;
-    } catch (error) {
-      console.error("Error getting media preview:", error);
-      return "";
-    }
-  };
+  //     return url;
+  //   } catch (error) {
+  //     console.error("Error getting media preview:", error);
+  //     return "";
+  //   }
+  // };
 
   const handleRemoveMedia = async (tweetIndex: number, mediaIndex: number) => {
-    const newTweets = [...tweets];
+    const newTweets = [...pageContent.tweets];
     const currentMedia = newTweets[tweetIndex].mediaIds || [];
     const mediaId = currentMedia[mediaIndex];
 
@@ -460,13 +501,17 @@ export default function PlayGround({
           (_, i) => i !== mediaIndex
         );
 
-        setTweets(newTweets);
+        setPageContent((prev) => ({
+          isThread: prev.isThread,
+          threadId: prev.threadId,
+          tweets: newTweets,
+        }));
         setContentChanged(true);
 
         // Save updates
-        if (isThread && threadId) {
+        if (pageContent.isThread && pageContent.threadId) {
           const thread: Thread = {
-            id: threadId,
+            id: pageContent.threadId,
             tweetIds: newTweets.map((t) => t.id),
             createdAt: new Date(),
             status: "draft",
@@ -484,27 +529,19 @@ export default function PlayGround({
 
   const addTweetToThread = (index: number) => {
     if (activeTab != "drafts") return;
-    // Generate a new threadId when converting to a thread
 
-    if (!threadId) {
-      const newThreadId = `thread-${uuidv4()}`;
-      setThreadId(newThreadId);
-    }
-
-    createNewTweet(index);
-  };
-  const createNewTweet = (index: number) => {
-    if (!isThread) {
+    if (!pageContent.isThread) {
       // Generate a new threadId when converting to a thread
       const newThreadId = `thread-${uuidv4()}`;
-      setThreadId(newThreadId);
 
-      const firstTweet = {
-        ...tweets[0],
+      // Create initial thread structure with first tweet properly threaded
+      const updatedFirstTweet = {
+        ...pageContent.tweets[0],
         threadId: newThreadId,
         position: 0,
       };
 
+      // Create new tweet
       const newTweet = {
         id: `tweet-${uuidv4()}`,
         content: "",
@@ -515,24 +552,54 @@ export default function PlayGround({
         position: 1,
       };
 
-      setTweets([firstTweet, newTweet]);
-      setIsThread(true);
+      // Update state with both tweets
+      setPageContent({
+        isThread: true,
+        threadId: newThreadId,
+        tweets: [updatedFirstTweet, newTweet],
+      });
+
+      // Save thread
+      const thread: Thread = {
+        id: newThreadId,
+        tweetIds: [updatedFirstTweet.id, newTweet.id],
+        createdAt: new Date(),
+        status: "draft",
+      };
+      tweetStorage.saveThread(thread, [updatedFirstTweet, newTweet], true);
     } else {
-      // For existing threads, use current threadId
+      // For existing threads, just add new tweet
       const newTweet = {
         id: `tweet-${uuidv4()}`,
         content: "",
         mediaIds: [],
         createdAt: new Date(),
         status: "draft" as const,
-        threadId: threadId || `thread-${uuidv4()}`,
+        threadId: pageContent.threadId,
         position: index + 1,
       };
 
-      const newTweets = [...tweets];
+      const newTweets = [...pageContent.tweets];
       newTweets.splice(index + 1, 0, newTweet);
-      setTweets(newTweets);
+
+      setPageContent({
+        isThread: true,
+        threadId: pageContent.threadId,
+        tweets: newTweets,
+      });
+
+      // Save updated thread
+      const thread: Thread = {
+        id: pageContent.threadId!,
+        tweetIds: newTweets.map((t) => t.id),
+        createdAt: new Date(),
+        status: "draft",
+      };
+      tweetStorage.saveThread(thread, newTweets, true);
     }
+    refreshSidebar();
+
+    // Focus the new textarea after state update
     setTimeout(() => {
       const nextTextarea = textareaRefs.current[index + 1];
       if (nextTextarea) {
@@ -553,11 +620,11 @@ export default function PlayGround({
       const userId = userData.id;
 
       // Save scheduled tweets to both localStorage and SQLite
-      if (isThread && threadId) {
+      if (pageContent.isThread && pageContent.threadId) {
         // Prepare thread data for SQLite
         const threadData = {
-          id: threadId,
-          tweetIds: tweets.map((t) => t.id),
+          id: pageContent.threadId,
+          tweetIds: pageContent.tweets.map((t) => t.id),
           scheduledFor: scheduledDate.toISOString(),
           status: "scheduled" as const,
           createdAt: new Date().toISOString(),
@@ -565,12 +632,12 @@ export default function PlayGround({
         };
 
         // Prepare tweets data for SQLite
-        const tweetsData = tweets.map((tweet) => ({
+        const tweetsData = pageContent.tweets.map((tweet) => ({
           id: tweet.id,
           content: tweet.content,
           mediaIds: tweet.mediaIds || [],
           scheduledFor: scheduledDate.toISOString(),
-          threadId: threadId,
+          threadId: pageContent.threadId,
           position: tweet.position,
           status: "scheduled" as const,
           createdAt: new Date().toISOString(),
@@ -594,8 +661,8 @@ export default function PlayGround({
 
         // Save to localStorage for UI
         const thread: Thread = {
-          id: threadId,
-          tweetIds: tweets.map((t) => t.id),
+          id: pageContent.threadId,
+          tweetIds: pageContent.tweets.map((t) => t.id),
           createdAt: new Date(),
           status: "scheduled",
           scheduledFor: scheduledDate,
@@ -603,7 +670,7 @@ export default function PlayGround({
 
         tweetStorage.saveThread(
           thread,
-          tweets.map((t) => ({
+          pageContent.tweets.map((t) => ({
             ...t,
             status: "scheduled" as const,
             scheduledFor: scheduledDate,
@@ -613,9 +680,9 @@ export default function PlayGround({
       } else {
         // Prepare single tweet data for SQLite
         const tweetData = {
-          id: tweets[0].id,
-          content: tweets[0].content,
-          mediaIds: tweets[0].mediaIds || [],
+          id: pageContent.tweets[0].id,
+          content: pageContent.tweets[0].content,
+          mediaIds: pageContent.tweets[0].mediaIds || [],
           scheduledFor: scheduledDate.toISOString(),
           status: "scheduled" as const,
           createdAt: new Date().toISOString(),
@@ -639,7 +706,7 @@ export default function PlayGround({
         // Save to localStorage for UI
         tweetStorage.saveTweet(
           {
-            ...tweets[0],
+            ...pageContent.tweets[0],
             status: "scheduled",
             scheduledFor: scheduledDate,
           },
@@ -670,7 +737,7 @@ export default function PlayGround({
     try {
       // Get media data for each tweet
       const tweetsWithMedia = await Promise.all(
-        tweets.map(async (tweet) => {
+        pageContent.tweets.map(async (tweet) => {
           let mediaUrls: string[] = [];
           if (tweet.mediaIds && tweet.mediaIds.length > 0) {
             mediaUrls = await Promise.all(
@@ -691,7 +758,9 @@ export default function PlayGround({
       const response = await fetch("/api/twitter/post", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isThread ? tweetsWithMedia : tweetsWithMedia[0]),
+        body: JSON.stringify(
+          pageContent.isThread ? tweetsWithMedia : tweetsWithMedia[0]
+        ),
       });
 
       if (!response.ok) {
@@ -702,21 +771,24 @@ export default function PlayGround({
       // await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // Update local storage
-      if (isThread && threadId) {
+      if (pageContent.isThread && pageContent.threadId) {
         const thread: Thread = {
-          id: threadId,
-          tweetIds: tweets.map((t) => t.id),
+          id: pageContent.threadId,
+          tweetIds: pageContent.tweets.map((t) => t.id),
           createdAt: new Date(),
           status: "published",
         };
         tweetStorage.saveThread(
           thread,
-          tweets.map((t) => ({ ...t, status: "published" as const })),
+          pageContent.tweets.map((t) => ({
+            ...t,
+            status: "published" as const,
+          })),
           true
         );
       } else {
         tweetStorage.saveTweet(
-          { ...tweets[0], status: "published" as const },
+          { ...pageContent.tweets[0], status: "published" as const },
           true
         );
       }
@@ -737,17 +809,18 @@ export default function PlayGround({
       setPublishingStatus("error");
     }
   };
+
   const handleSaveAsDraft = () => {
-    if (isThread && threadId) {
+    if (pageContent.isThread && pageContent.threadId) {
       const thread: Thread = {
-        id: threadId,
-        tweetIds: tweets.map((t) => t.id),
+        id: pageContent.threadId,
+        tweetIds: pageContent.tweets.map((t) => t.id),
         createdAt: new Date(),
         status: "draft",
       };
-      tweetStorage.saveThread(thread, tweets, true); // true for immediate sync
+      tweetStorage.saveThread(thread, pageContent.tweets, true); // true for immediate sync
     } else {
-      tweetStorage.saveTweet(tweets[0], true); // true for immediate sync
+      tweetStorage.saveTweet(pageContent.tweets[0], true); // true for immediate sync
     }
 
     hideEditor();
@@ -786,19 +859,19 @@ export default function PlayGround({
   };
 
   const handleRepurpose = () => {
-    if (isThread && threadId) {
+    if (pageContent.isThread && pageContent.threadId) {
       const [newThread, newTweets] = repurposeThread(
         {
-          id: threadId,
-          tweetIds: tweets.map((t) => t.id),
+          id: pageContent.threadId,
+          tweetIds: pageContent.tweets.map((t) => t.id),
           createdAt: new Date(),
           status: "draft",
         },
-        tweets
+        pageContent.tweets
       );
       tweetStorage.saveThread(newThread, newTweets, true);
     } else {
-      const newTweet = repurposeTweet(tweets[0]);
+      const newTweet = repurposeTweet(pageContent.tweets[0]);
       tweetStorage.saveTweet(newTweet, true);
     }
 
@@ -808,17 +881,21 @@ export default function PlayGround({
   };
 
   // Ensure unique IDs before rendering
-  const tweetsWithUniqueIds = tweets.map((tweet, index) => ({
+  const tweetsWithUniqueIds = pageContent.tweets.map((tweet, index) => ({
     ...tweet,
     id: tweet.id || `${uuidv4()}-${index}`, // Fallback ID includes index for uniqueness
   }));
 
+  // Adjust text areas;
   useEffect(() => {
+    console.log(" adjusting text area called");
+
     adjustAllTextareas();
-  }, [tweets]);
+  }, [pageContent.tweets]);
 
   // // Initialize editor with proper state
   useEffect(() => {
+    console.log(" initialized called here");
     const initializeEditor = async () => {
       if (draftId) {
         const isScheduled =
@@ -828,28 +905,29 @@ export default function PlayGround({
 
         if (content) {
           // Reset thread state before setting new content
-          setIsThread(false);
+          // setIsThread(false);
 
           if ("tweets" in content) {
-            setIsThread(true);
-            setTweets(
-              content.tweets.map((tweet) => ({
+            setPageContent((prev) => ({
+              isThread: true,
+              threadId: content.id,
+              tweets: content.tweets.map((tweet) => ({
                 ...tweet,
                 status: content.status,
                 scheduledFor: content.scheduledFor,
-              }))
-            );
-            setThreadId(content.id);
+              })),
+            }));
           } else {
-            setTweets([content as Tweet]);
-            setThreadId(null);
+            setPageContent((prev) => ({
+              isThread: prev.isThread,
+              threadId: undefined,
+              tweets: [content as Tweet],
+            }));
           }
         }
       } else {
         // Only create new tweets in draft mode
         if (activeTab === "drafts") {
-          setIsThread(false);
-          setThreadId(null);
           const newTweet: Tweet = {
             id: `tweet-${uuidv4()}`,
             content: "",
@@ -857,7 +935,11 @@ export default function PlayGround({
             createdAt: new Date(),
             status: "draft",
           };
-          setTweets([newTweet]);
+          setPageContent((prev) => ({
+            isThread: false,
+            threadId: undefined,
+            tweets: [newTweet],
+          }));
           tweetStorage.saveTweet(newTweet, true);
           refreshSidebar();
         }
@@ -878,20 +960,20 @@ export default function PlayGround({
   ]);
 
   // Add effect to manage threadId
-  useEffect(() => {
-    // If it's a thread draft, use its existing threadId
-    if (draftType === "thread" && draftId) {
-      const thread = tweetStorage.getThreads().find((t) => t.id === draftId);
-      setThreadId(thread?.id || `thread-${uuidv4()}`);
-    }
-    // For new tweets or single tweets, set threadId to null
-    else {
-      setThreadId(null);
-    }
-  }, [draftId, draftType]);
+  // useEffect(() => {
+  //   // If it's a thread draft, use its existing threadId
+  //   if (draftType === "thread" && draftId) {
+  //     const thread = tweetStorage.getThreads().find((t) => t.id === draftId);
+  //     setThreadId(thread?.id || `thread-${uuidv4()}`);
+  //   }
+  //   // For new tweets or single tweets, set threadId to null
+  //   else {
+  //     setThreadId(null);
+  //   }
+  // }, [draftId, draftType]);
 
   useEffect(() => {
-    if (!isLoading && tweets.length > 0 && contentChanged) {
+    if (!isLoading && pageContent.tweets.length > 0 && contentChanged) {
       // Only run if content changed
       setSaveState((prev) => ({
         ...prev,
@@ -901,20 +983,20 @@ export default function PlayGround({
       }));
 
       try {
-        if (isThread && threadId) {
-          const firstTweet = tweets[0];
+        if (pageContent.isThread && pageContent.threadId) {
+          const firstTweet = pageContent.tweets[0];
           const thread: Thread = {
-            id: threadId,
-            tweetIds: tweets.map((t) => t.id),
+            id: pageContent.threadId,
+            tweetIds: pageContent.tweets.map((t) => t.id),
             createdAt: firstTweet.createdAt,
             status: firstTweet.status,
             scheduledFor: firstTweet.scheduledFor,
           };
           // Save to localStorage and queue for backend sync
-          tweetStorage.saveThread(thread, tweets);
+          tweetStorage.saveThread(thread, pageContent.tweets);
         } else {
           // Save to localStorage and queue for backend sync
-          tweetStorage.saveTweet(tweets[0]);
+          tweetStorage.saveTweet(pageContent.tweets[0]);
         }
 
         setSaveState((prev) => ({
@@ -936,20 +1018,30 @@ export default function PlayGround({
         console.error("Error saving tweets:", error);
       }
     }
-  }, [tweets, isThread, threadId, isLoading, contentChanged, refreshSidebar]);
+  }, [
+    pageContent.tweets,
+    pageContent.isThread,
+    pageContent.threadId,
+    isLoading,
+    contentChanged,
+    refreshSidebar,
+  ]);
 
+  // Effect to Switch between Tabs
   useEffect(() => {
     const handleSwitchDraft = (e: CustomEvent) => {
       const direction = e.detail as "prev" | "next";
-      if (!tweets.length) return;
+      if (!pageContent.tweets.length) return;
 
       const currentIndex = currentlyEditedTweet;
       let newIndex;
 
       if (direction === "prev") {
-        newIndex = currentIndex > 0 ? currentIndex - 1 : tweets.length - 1;
+        newIndex =
+          currentIndex > 0 ? currentIndex - 1 : pageContent.tweets.length - 1;
       } else {
-        newIndex = currentIndex < tweets.length - 1 ? currentIndex + 1 : 0;
+        newIndex =
+          currentIndex < pageContent.tweets.length - 1 ? currentIndex + 1 : 0;
       }
 
       setCurrentlyEditedTweet(newIndex);
@@ -964,11 +1056,17 @@ export default function PlayGround({
         handleSwitchDraft as EventListener
       );
     };
-  }, [currentlyEditedTweet, tweets.length]);
-  // Clean up when component unmounts
+  }, [currentlyEditedTweet, pageContent.tweets.length]);
 
+  // Clean up when component unmounts
   useEffect(() => {
-    return () => setTweets([]);
+    console.log("clean up when component unmounts");
+    return () =>
+      setPageContent((prev) => ({
+        isThread: prev.isThread,
+        threadId: prev.threadId,
+        tweets: [],
+      }));
   }, []);
 
   // keyboard shortcuts
@@ -1028,7 +1126,7 @@ export default function PlayGround({
           case "ArrowDown":
             e.preventDefault();
             // Move to next draft
-            if (currentlyEditedTweet < tweets.length - 1) {
+            if (currentlyEditedTweet < pageContent.tweets.length - 1) {
               setCurrentlyEditedTweet((prev) => prev + 1);
               textareaRefs.current[currentlyEditedTweet + 1]?.focus();
             }
@@ -1039,7 +1137,7 @@ export default function PlayGround({
 
     window.addEventListener("keydown", handleDraftSwitch);
     return () => window.removeEventListener("keydown", handleDraftSwitch);
-  }, [currentlyEditedTweet, tweets.length]);
+  }, [currentlyEditedTweet, pageContent.tweets.length]);
 
   if (isLoading) {
     return (
@@ -1143,7 +1241,7 @@ export default function PlayGround({
         {tweetsWithUniqueIds.map((tweet, index) => (
           <div key={tweet.id} className="relative p-4">
             {/* Thread line */}
-            {index < tweets.length - 1 && (
+            {index < pageContent.tweets.length - 1 && (
               <div
                 className="absolute left-10 w-0.5 bg-gray-800"
                 style={{
@@ -1179,7 +1277,7 @@ export default function PlayGround({
                       {userTwitterHandle}
                     </span>
                   </div>
-                  {(tweets.length === 1 || index > 0) &&
+                  {(pageContent.tweets.length === 1 || index > 0) &&
                     activeTab === "drafts" && (
                       <button
                         onClick={() => handleDeleteTweet(index)}
@@ -1220,7 +1318,7 @@ export default function PlayGround({
                     }
                   }}
                 />
-               
+
                 {/* Media Preview */}
                 {tweet.mediaIds && tweet.mediaIds.length > 0 && (
                   <div className="mt-2">
@@ -1257,7 +1355,7 @@ export default function PlayGround({
                     <CharacterCount content={tweet.content} />
                     <ThreadPosition
                       position={index + 1}
-                      totalTweets={tweets.length}
+                      totalTweets={pageContent.tweets.length}
                     />
                     {activeTab === "drafts" && (
                       <div
@@ -1292,7 +1390,7 @@ export default function PlayGround({
             className="flex items-center gap-2 px-4 py-2 bg-blue-500 rounded-full hover:bg-blue-600 text-white"
           >
             <Save size={18} />
-            Save {isThread ? "Thread" : "Tweet"} as draft
+            Save {pageContent.isThread ? "Thread" : "Tweet"} as draft
           </button>
         ) : activeTab === "scheduled" ? (
           activeTab === "scheduled" && (
@@ -1300,15 +1398,15 @@ export default function PlayGround({
               <button
                 onClick={() => {
                   // Convert to draft
-                  const updatedTweets = tweets.map((tweet) => ({
+                  const updatedTweets = pageContent.tweets.map((tweet) => ({
                     ...tweet,
                     status: "draft" as const,
                     scheduledFor: undefined,
                   }));
 
-                  if (isThread && threadId) {
+                  if (pageContent.isThread && pageContent.threadId) {
                     const thread: Thread = {
-                      id: threadId,
+                      id: pageContent.threadId,
                       tweetIds: updatedTweets.map((t) => t.id),
                       createdAt: new Date(),
                       status: "draft",
@@ -1337,7 +1435,7 @@ export default function PlayGround({
                 className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center gap-2"
               >
                 <PenSquare size={18} />
-                Repurpose {isThread ? "Thread" : "Tweet"}
+                Repurpose {pageContent.isThread ? "Thread" : "Tweet"}
               </button>
             </div>
           )
@@ -1346,7 +1444,7 @@ export default function PlayGround({
 
       {showPreview && (
         <ThreadPreview
-          tweets={tweets}
+          tweets={pageContent.tweets}
           onClose={() => setShowPreview(false)}
           getMediaUrl={getMediaFile}
         />
@@ -1390,7 +1488,7 @@ export default function PlayGround({
         }}
         status={publishingStatus || "publishing"}
         error={publishingError || undefined}
-        isThread={isThread}
+        isThread={pageContent.isThread}
       />
     </div>
   );

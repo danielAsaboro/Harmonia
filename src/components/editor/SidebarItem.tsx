@@ -26,6 +26,7 @@ export function SidebarItem({
 
   // Get preview content
   // - first tweet for threads, or the tweet content itself
+  // console.log(" inside sidebar; is thread?", isThread);
   const preview = isThread
     ? tweetStorage.getThreadPreview(item.id)?.content || ""
     : (item as Tweet).content;
@@ -59,6 +60,7 @@ export function SidebarItem({
     setShowMenu(false);
     setShowShareModal(true);
   };
+
   return (
     <div
       className={`

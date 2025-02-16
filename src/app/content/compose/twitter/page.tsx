@@ -12,7 +12,7 @@ import MetadataTab from "@/components/editor/MetadataTab";
 import ActionsMenu from "@/components/editor/PowerTab";
 import { tweetStorage } from "@/utils/localStorage";
 import { PenSquare } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 function WelcomeScreen() {
   const { showEditor } = useEditor();
@@ -35,7 +35,8 @@ function WelcomeScreen() {
 
     const draftsCount = tweetStorage
       .getTweets()
-      .filter((t) => t.status === "draft").length;
+      .filter((t) => t.status === "draft")
+      .filter((t) => !t.position || t.position == 0).length;
     const scheduledCount = tweetStorage
       .getTweets()
       .filter((t) => t.status === "scheduled").length;

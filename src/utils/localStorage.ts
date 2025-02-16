@@ -29,12 +29,6 @@ export class TweetStorageService {
     return TweetStorageService.instance;
   }
 
-  // Debounced save for localStorage only - separate from backend sync
-  private debouncedLocalSave = debounce(async (key: string, data: any) => {
-    localStorage.setItem(key, JSON.stringify(data));
-    this.lastSave = Date.now();
-  }, 1000);
-
   getUserDetails(): TwitterUserDetails | null {
     try {
       const details = localStorage.getItem(this.USER_DETAILS_KEY);
@@ -113,7 +107,8 @@ export class TweetStorageService {
       }
 
       // Always save to localStorage with debounce
-      this.debouncedLocalSave(this.TWEETS_KEY, tweets);
+      localStorage.setItem(this.TWEETS_KEY, JSON.stringify(tweets));
+      this.lastSave = Date.now();
 
       // Queue for backend sync if it's a draft
       if (tweet.status === "draft") {
@@ -141,7 +136,8 @@ export class TweetStorageService {
       }
 
       // Save thread to localStorage with debounce
-      this.debouncedLocalSave(this.THREADS_KEY, threads);
+      localStorage.setItem(this.THREADS_KEY, JSON.stringify(threads));
+      this.lastSave = Date.now();
 
       // Save associated tweets to localStorage
       tweets.forEach((tweet) => {
@@ -171,7 +167,7 @@ export class TweetStorageService {
       localStorage.setItem(this.TWEETS_KEY, JSON.stringify(tweets));
 
       // Send delete request to backend immediately
-      fetch(`/api/drafts?type=tweet&id=${tweetId}`, {
+      fetch(`/api/drafts?type=tweet&id=${tweetId}&cleanup=true`, {
         method: "DELETE",
       }).catch((error) => {
         console.error("Error deleting tweet from backend:", error);
@@ -190,7 +186,7 @@ export class TweetStorageService {
       localStorage.setItem(this.TWEETS_KEY, JSON.stringify(tweets));
 
       // Send delete request to backend immediately
-      fetch(`/api/drafts?type=thread&id=${threadId}`, {
+      fetch(`/api/drafts?type=thread&id=${threadId}&cleanup=true`, {
         method: "DELETE",
       }).catch((error) => {
         console.error("Error deleting thread from backend:", error);

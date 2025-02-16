@@ -14,7 +14,7 @@ class DraftSyncService {
   private pendingSyncs: Map<string, PendingSync> = new Map();
   private syncInterval: NodeJS.Timeout | null = null;
   // private SYNC_INTERVAL = 15 * 1000; // 15 seconds for testing
-  private SYNC_INTERVAL = 3 * 60 * 1000; // 3 minutes in milliseconds
+  private SYNC_INTERVAL = 30 * 1000; // 30 secs in milliseconds
   private isSyncing = false;
 
   private constructor() {
@@ -47,6 +47,7 @@ class DraftSyncService {
 
     try {
       for (const sync of syncsArray) {
+        console.log(" sync id", sync.id);
         if (sync.type === "tweet") {
           const tweet = tweetStorage.getTweets().find((t) => t.id === sync.id);
           if (tweet) {
