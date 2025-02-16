@@ -1,28 +1,33 @@
 // /lib/cron/scheduler.ts
 import cron from "node-cron";
-import { db } from "../db/sqlite_db_service";
 import { publishTweet, publishThread } from "../twitter/publisher";
 import { logToFile, logError } from "../utils/logger";
+import { scheduledThreadsService, scheduledTweetsService } from "../services";
 
 export function startScheduler() {
   cron.schedule("* * * * *", async () => {
     try {
       const now = new Date();
       logToFile("Starting scheduled publication check");
-
-      const pendingTweets = db.getPendingScheduledTweets(now);
-      const pendingThreads = db.getPendingScheduledThreads(now);
+      scheduledThreadsService;
+      const pendingTweets =
+        await scheduledTweetsService.getPendingScheduledTweets(now);
+      const pendingThreads =
+        await scheduledThreadsService.getPendingScheduledThreads(now);
 
       // Process standalone tweets
       for (const tweet of pendingTweets) {
         if (!tweet.threadId) {
           try {
             await publishTweet(tweet);
-            db.updateTweetStatus(tweet.id, "published");
+            await scheduledTweetsService.updateTweetStatus(
+              tweet.id,
+              "published"
+            );
             logToFile(`Successfully published tweet ${tweet.id}`);
           } catch (error) {
             logError(error, `Failed to publish tweet ${tweet.id}`);
-            db.updateTweetStatus(
+            await scheduledTweetsService.updateTweetStatus(
               tweet.id,
               "failed",
               error instanceof Error ? error.message : "Unknown error"
@@ -39,10 +44,16 @@ export function startScheduler() {
             .sort((a, b) => (a.position || 0) - (b.position || 0));
 
           await publishThread(thread, threadTweets);
-          db.updateThreadStatus(thread.id, "published");
+          await scheduledThreadsService.updateThreadStatus(
+            thread.id,
+            "published"
+          );
 
-          threadTweets.forEach((tweet) => {
-            db.updateTweetStatus(tweet.id, "published");
+          threadTweets.forEach(async (tweet) => {
+            await scheduledTweetsService.updateTweetStatus(
+              tweet.id,
+              "published"
+            );
           });
 
           logToFile(
@@ -50,7 +61,7 @@ export function startScheduler() {
           );
         } catch (error) {
           logError(error, `Failed to publish thread ${thread.id}`);
-          db.updateThreadStatus(
+          await scheduledThreadsService.updateThreadStatus(
             thread.id,
             "failed",
             error instanceof Error ? error.message : "Unknown error"

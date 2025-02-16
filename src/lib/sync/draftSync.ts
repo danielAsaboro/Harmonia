@@ -47,23 +47,16 @@ class DraftSyncService {
 
     try {
       for (const sync of syncsArray) {
-        console.log(" sync id", sync.id);
         if (sync.type === "tweet") {
           const tweet = tweetStorage.getTweets().find((t) => t.id === sync.id);
           if (tweet && !tweet.threadId) {
             // Only sync standalone tweets
-            console.log("doesn't have an id");
             await this.syncTweetToBackend(tweet);
           } else if (tweet && tweet.threadId) {
-            console.log("has an id");
-
             // If it has a threadId, we should sync the entire thread instead
             const thread = tweetStorage.getThreadWithTweets(tweet.threadId);
-            console.log(" is thread or not 1", thread);
 
             if (thread) {
-              console.log("about to sync thread to backend 1");
-
               await this.syncThreadToBackend(thread);
               console.log("finished syncing thread to backend 1");
             }
@@ -72,10 +65,7 @@ class DraftSyncService {
           const tweet = tweetStorage.getTweets().find((t) => t.id === sync.id);
           if (tweet) {
             const thread = tweetStorage.getThreadWithTweets(tweet.threadId!);
-            console.log(" is thread or not 2", thread);
             if (thread) {
-              console.log("about to sync thread to backend 2");
-
               await this.syncThreadToBackend(thread);
               console.log("finished syncing thread to backend 2");
             }

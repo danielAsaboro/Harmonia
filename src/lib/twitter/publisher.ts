@@ -1,8 +1,8 @@
 // /lib/twitter/publisher.ts
 import { ScheduledTweet, ScheduledThread, TokenData } from "../db/schema";
 import { TwitterApi } from "twitter-api-v2";
-import { db } from "../db/sqlite_db_service";
 import { getMediaFile } from "@/components/editor/media/indexedDB";
+import { userTokensService } from "../services";
 
 async function refreshTokenIfNeeded(userTokens: TokenData): Promise<string> {
   const now = Date.now();
@@ -20,7 +20,7 @@ async function refreshTokenIfNeeded(userTokens: TokenData): Promise<string> {
         await client.refreshOAuth2Token(userTokens.refreshToken);
 
       // Update tokens in database
-      db.updateUserTokens(
+     await userTokensService.updateUserTokens(
         userTokens.userId,
         accessToken,
         new Date(Date.now() + expiresIn * 1000).toISOString()
