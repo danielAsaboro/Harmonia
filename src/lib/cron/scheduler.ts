@@ -1,6 +1,6 @@
 // /lib/cron/scheduler.ts
 import cron from "node-cron";
-import { db } from "../db";
+import { db } from "../db/sqlite_db_service";
 import { publishTweet, publishThread } from "../twitter/publisher";
 import { logToFile, logError } from "../utils/logger";
 
@@ -10,8 +10,8 @@ export function startScheduler() {
       const now = new Date();
       logToFile("Starting scheduled publication check");
 
-      const pendingTweets = db.getPendingTweets(now);
-      const pendingThreads = db.getPendingThreads(now);
+      const pendingTweets = db.getPendingScheduledTweets(now);
+      const pendingThreads = db.getPendingScheduledThreads(now);
 
       // Process standalone tweets
       for (const tweet of pendingTweets) {

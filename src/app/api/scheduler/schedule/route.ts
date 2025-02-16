@@ -1,6 +1,13 @@
 // /app/api/scheduler/schedule/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+// import { db } from "@/lib/db/sqlite_db_service";
+import {
+  draftTweetsService,
+  draftThreadsService,
+  scheduledThreadsService,
+  scheduledTweetsService,
+  userTokensService,
+} from "@/lib/services";
 import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
@@ -23,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // First, ensure user tokens exist in database
     try {
-      db.saveUserTokens({
+      await userTokensService.saveUserTokens({
         userId: userData.id,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
@@ -57,11 +64,11 @@ export async function POST(request: NextRequest) {
 
       try {
         // Save thread to SQLite
-        db.saveScheduledThread(threadWithUser);
+        await scheduledThreadsService.saveScheduledThread(threadWithUser);
 
         // Save all tweets from thread
         for (const tweet of tweetsWithUser) {
-          db.saveScheduledTweet(tweet);
+          await scheduledTweetsService.saveScheduledTweet(tweet);
         }
       } catch (error) {
         console.error("Error saving thread:", error);
@@ -79,7 +86,7 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        db.saveScheduledTweet(tweetWithUser);
+        await scheduledTweetsService.saveScheduledTweet(tweetWithUser);
       } catch (error) {
         console.error("Error saving tweet:", error);
         return NextResponse.json(

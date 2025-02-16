@@ -1,0 +1,132 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model user_tokens {
+  userId            String                 @id
+  accessToken       String
+  refreshToken      String
+  expiresAt         String
+  username          String
+  name              String
+  profileImageUrl   String?
+  draftThreads      draft_threads[]
+  draftTweets       draft_tweets[]
+  scheduledThreads  scheduled_threads[]
+  scheduledTweets   scheduled_tweets[]
+  sharedDraftComments shared_draft_comments[]
+  sharedDrafts      shared_drafts[]
+
+  @@unique([accessToken])
+}
+
+model scheduled_tweets {
+  id           String     @id
+  content      String
+  mediaIds     String?
+  scheduledFor String
+  threadId     String?
+  position     Int?
+  status       String
+  createdAt    String
+  error        String?
+  userId       String
+  user         user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  thread       scheduled_threads? @relation(fields: [threadId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([scheduledFor])
+}
+
+model scheduled_threads {
+  id           String     @id
+  tweetIds     String
+  scheduledFor String
+  status       String
+  createdAt    String
+  error        String?
+  userId       String
+  user         user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  tweets       scheduled_tweets[]
+
+  @@index([userId])
+  @@index([scheduledFor])
+}
+
+model draft_tweets {
+  id          String     @id
+  content     String
+  mediaIds    String?
+  createdAt   String
+  updatedAt   String
+  status      String
+  threadId    String?
+  position    Int?
+  tags        String?
+  userId      String
+  user        user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  thread      draft_threads? @relation(fields: [threadId], references: [id], onDelete: SetNull)
+
+  @@index([threadId])
+  @@index([userId])
+}
+
+model draft_threads {
+  id          String     @id
+  tweetIds    String
+  createdAt   String
+  updatedAt   String
+  status      String
+  tags        String?
+  userId      String
+  user        user_tokens @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  tweets      draft_tweets[]
+
+  @@index([userId])
+}
+
+model shared_drafts {
+  id                String                 @id
+  draftId           String
+  draftType         String
+  createdAt         String
+  expiresAt         String
+  canComment        Boolean                @default(false)
+  creatorId         String
+  accessToken       String                 @unique
+  authorName        String
+  authorHandle      String
+  authorProfileUrl  String?
+  shareState        String                 @default("active")
+  comments          shared_draft_comments[]
+  creator           user_tokens             @relation(fields: [creatorId], references: [userId], onDelete: Cascade)
+
+  @@index([draftId])
+  @@index([accessToken])
+  @@index([creatorId])
+}
+
+model shared_draft_comments {
+  id            String       @id
+  sharedDraftId String
+  content       String
+  authorId      String?
+  authorName    String
+  createdAt     String
+  position      Int?
+  metadata      String       @default("{}")
+  resolved      Boolean      @default(false)
+  resolvedAt    String?
+  resolvedBy    String?
+  author        user_tokens? @relation(fields: [authorId], references: [userId], onDelete: SetNull)
+  sharedDraft   shared_drafts @relation(fields: [sharedDraftId], references: [id], onDelete: Cascade)
+
+  @@index([resolved])
+  @@index([authorId])
+  @@index([sharedDraftId])
+}

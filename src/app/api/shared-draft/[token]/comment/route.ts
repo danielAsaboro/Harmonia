@@ -1,6 +1,15 @@
 // /app/api/shared-draft/[token]/comment/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+// import { db } from "@/lib/db/sqlite_db_service";
+import {
+  draftTweetsService,
+  draftThreadsService,
+  scheduledThreadsService,
+  sharedDraftCommentsService,
+  sharedDraftsService,
+  scheduledTweetsService,
+  userTokensService,
+} from "@/lib/services";
 import { nanoid } from "nanoid";
 import { cookies } from "next/headers";
 
@@ -27,7 +36,7 @@ export async function POST(
     const user = await getUserFromSession();
     const body = await request.json();
 
-    const draft = db.getSharedDraftByToken(token);
+    const draft = await sharedDraftsService.getSharedDraftByToken(token);
     if (!draft) {
       return NextResponse.json({ error: "Draft not found" }, { status: 404 });
     }
@@ -50,7 +59,7 @@ export async function POST(
       resolved: false,
     };
 
-    db.addComment(comment);
+    await sharedDraftCommentsService.addComment(comment);
     return NextResponse.json({ comment });
   } catch (error) {
     console.error("Error adding comment:", error);

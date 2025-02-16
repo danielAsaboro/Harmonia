@@ -1,7 +1,7 @@
 // /lib/twitter/publisher.ts
 import { ScheduledTweet, ScheduledThread, TokenData } from "../db/schema";
 import { TwitterApi } from "twitter-api-v2";
-import { db } from "../db";
+import { db } from "../db/sqlite_db_service";
 import { getMediaFile } from "@/components/editor/media/indexedDB";
 
 async function refreshTokenIfNeeded(userTokens: TokenData): Promise<string> {

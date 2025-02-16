@@ -1,24 +1,17 @@
-// /lib/db/index.ts
+// /lib/db/sqlite_db_service.ts
 import Database from "better-sqlite3";
 import path from "path";
 import {
   ScheduledTweet,
   ScheduledThread,
   UserTokens,
-  initializeDatabase,
   DraftTweet,
   DraftThread,
   SharedDraftComment,
   SharedDraft,
+  SharedDraftInfo,
 } from "./schema";
-
-export interface SharedDraftInfo {
-  id: string;
-  accessToken: string;
-  canComment: boolean;
-  expiresAt: string;
-  shareState: "active" | "expired" | "revoked";
-}
+import { initializeDatabase } from "./init_db";
 
 class DatabaseService {
   private static instance: DatabaseService;
@@ -118,7 +111,7 @@ class DatabaseService {
     );
   }
 
-  getPendingTweets(beforeDate: Date): ScheduledTweet[] {
+  getPendingScheduledTweets(beforeDate: Date): ScheduledTweet[] {
     const stmt = this.db.prepare(`
       SELECT 
         t.*,
@@ -144,7 +137,7 @@ class DatabaseService {
     }));
   }
 
-  getPendingThreads(beforeDate: Date): ScheduledThread[] {
+  getPendingScheduledThreads(beforeDate: Date): ScheduledThread[] {
     const stmt = this.db.prepare(`
       SELECT 
         t.*,
