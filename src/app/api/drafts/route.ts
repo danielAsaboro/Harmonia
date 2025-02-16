@@ -8,8 +8,9 @@ import {
   draftThreadsService,
   userTokensService,
 } from "@/lib/services";
-import { fileStorage } from "@/lib/storage/fileStorage";
-import { prismaDb } from "@/lib/db/prisma_service";
+// import { fileStorage } from "@/lib/storage/fileStorage";
+// import { prismaDb } from "@/lib/db/prisma_service";
+import { fileStorage } from "@/lib/storage";
 
 async function getUserData(request: NextRequest): Promise<{
   userId: string;
@@ -194,8 +195,9 @@ export async function DELETE(req: NextRequest) {
           // Delete media files|
           await Promise.allSettled(
             // JSON.parse(tweet.mediaIds)
-            tweet.mediaIds.map((mediaId: string) =>
-              fileStorage.deleteFile(userData.userId, mediaId)
+            tweet.mediaIds.map(
+              async (mediaId: string) =>
+                await fileStorage.deleteFile(userData.userId, mediaId)
             )
           );
         }

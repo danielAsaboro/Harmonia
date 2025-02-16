@@ -408,6 +408,7 @@ export default function PlayGround({
           }
 
           const data = await response.json();
+          // console.log(" data id ", data.id);
 
           // Store in IndexedDB for local caching
           await storeMediaFile(data.id, file);

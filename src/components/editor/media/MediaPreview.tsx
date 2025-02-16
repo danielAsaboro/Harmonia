@@ -26,6 +26,7 @@ export default function MediaPreview({
       const urls = await Promise.all(
         mediaIds.map((mediaId) => getMediaUrl(mediaId))
       );
+      // console.log("   inspecting the urls", urls);
       setMediaUrls(urls);
     };
 

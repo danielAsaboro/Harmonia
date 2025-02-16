@@ -84,7 +84,7 @@ const ReadOnlyTweetViewer = ({
                       onRemove={() => undefined}
                       mediaIds={tweet.mediaIds}
                       getMediaUrl={async (mediaId: string) => {
-                        return `/media_uploads/${author.id}/${mediaId}`;
+                        return mediaId;
                       }}
                       isDraft={false}
                     />

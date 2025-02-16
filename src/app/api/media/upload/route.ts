@@ -2,7 +2,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { fileStorage, FileStorageError } from "@/lib/storage/fileStorage";
+import { fileStorage } from "@/lib/storage";
+import { FileStorageError } from "@/lib/storage/errors";
+// import { fileStorage, FileStorageError } from "@/lib/storage/fileStorage";
 
 export const config = {
   api: {

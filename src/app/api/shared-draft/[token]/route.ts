@@ -10,6 +10,7 @@ import {
   sharedDraftsService,
   sharedDraftCommentsService,
 } from "@/lib/services";
+import { getMediaUrls } from "@/lib/utils/mediaUrl";
 
 export async function GET(
   req: NextRequest,
@@ -46,11 +47,18 @@ export async function GET(
         sharedDraft.creatorId
       );
       if (draft) {
+        // Add signed URLs for media if present
+        console.log("   media ids", draft.mediaIds);
+        const mediaUrls = draft.mediaIds
+          ? await getMediaUrls(draft.mediaIds, sharedDraft.creatorId)
+          : [];
+        console.log(" signed urls", mediaUrls);
         draft = {
           ...draft,
           authorName: authorTokens.name,
           authorHandle: `@${authorTokens.username}`,
           authorProfileUrl: authorTokens.profileImageUrl,
+          mediaIds: mediaUrls, // Add the composed URLs
         };
       }
     } else {
@@ -59,13 +67,22 @@ export async function GET(
         sharedDraft.creatorId
       );
       if (threadData) {
-        // Add author info to each tweet in the thread
-        const tweetsWithAuthor = threadData.tweets.map((tweet) => ({
-          ...tweet,
-          authorName: authorTokens.name,
-          authorHandle: `@${authorTokens.username}`,
-          authorProfileUrl: authorTokens.profileImageUrl,
-        }));
+        // Process media URLs for each tweet in the thread
+        const tweetsWithAuthor = await Promise.all(
+          threadData.tweets.map(async (tweet) => {
+            const mediaUrls = tweet.mediaIds
+              ? await getMediaUrls(tweet.mediaIds, sharedDraft.creatorId)
+              : [];
+
+            return {
+              ...tweet,
+              authorName: authorTokens.name,
+              authorHandle: `@${authorTokens.username}`,
+              authorProfileUrl: authorTokens.profileImageUrl,
+              mediaIds: mediaUrls,
+            };
+          })
+        );
 
         draft = {
           ...threadData.thread,
