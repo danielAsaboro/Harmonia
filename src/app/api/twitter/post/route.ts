@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 
 interface TweetData {
   content: string;
-  media?: string[];
+  mediaIds?: string[];
 }
 
 export async function POST(request: NextRequest) {
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
 
     // Can be a single tweet or array of tweets for thread
     const data = await request.json();
+    // console.dir(data, { depth: null });
     const tweets: TweetData[] = Array.isArray(data) ? data : [data];
 
     // Initialize Twitter clients
@@ -35,9 +36,9 @@ export async function POST(request: NextRequest) {
       let mediaIds: string[] = [];
 
       // Upload media if present using v1 client
-      if (tweet.media && tweet.media.length > 0) {
+      if (tweet.mediaIds && tweet.mediaIds.length > 0) {
         mediaIds = await Promise.all(
-          tweet.media.map((mediaItem: string) =>
+          tweet.mediaIds.map((mediaItem: string) =>
             uploadTwitterMedia(v1Client, mediaItem)
           )
         );
@@ -82,7 +83,8 @@ export async function POST(request: NextRequest) {
       postedTweets.push(postedTweet);
     }
 
-    return NextResponse.json(postedTweets);
+    // return NextResponse.json(postedTweets);
+    return NextResponse.json({ lol: "" });
   } catch (error) {
     console.error("Error posting to Twitter:", error);
     return NextResponse.json(
