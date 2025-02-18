@@ -18,6 +18,7 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
+    console.log(" extracted token ", token)
     // First, get the shared draft info using the access token
     const sharedDraft = await sharedDraftsService.getSharedDraftByToken(token);
 
@@ -48,11 +49,11 @@ export async function GET(
       );
       if (draft) {
         // Add signed URLs for media if present
-        console.log("   media ids", draft.mediaIds);
+        // console.log("   media ids", draft.mediaIds);
         const mediaUrls = draft.mediaIds
           ? await getMediaUrls(draft.mediaIds, sharedDraft.creatorId)
           : [];
-        console.log(" signed urls", mediaUrls);
+        // console.log(" signed urls", mediaUrls);
         draft = {
           ...draft,
           authorName: authorTokens.name,

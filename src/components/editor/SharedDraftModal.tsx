@@ -42,10 +42,12 @@ const SharedDraftModal: React.FC<SharedDraftModalProps> = ({
 
   const checkExistingShare = async () => {
     try {
+      if (isExistingShare) return;
       setIsLoading(true);
       const response = await fetch(`/api/shared-draft/info?draftId=${draftId}`);
       if (response.ok) {
         const { shareInfo } = await response.json();
+        console.log(shareInfo)
         if (shareInfo) {
           setIsExistingShare(true);
           setCanComment(shareInfo.canComment);
@@ -56,6 +58,7 @@ const SharedDraftModal: React.FC<SharedDraftModalProps> = ({
           setSharedLink("");
         }
       }
+      console.log(" whats happening here");
     } catch (err) {
       console.error("Error checking share status:", err);
     } finally {

@@ -108,7 +108,7 @@ export async function uploadTwitterMedia(
     const mediaType = mediaData.split(";")[0].split("/")[1];
 
     // Upload to Twitter using v1 API
-    const mediaId = await client.v1.uploadMedia(buffer, {
+    const mediaId = await client.v1.uploadMedia(buffer,  {
       mimeType: `image/${mediaType}`,
     });
 
@@ -118,3 +118,26 @@ export async function uploadTwitterMedia(
     throw new Error("Failed to upload media to Twitter");
   }
 }
+
+//
+// Helper function to convert array to correct tuple type
+export const getMediaIdsTuple = (ids: string[]) => {
+  const mediaCount = ids.length;
+  if (mediaCount === 1) return { media_ids: [ids[0]] as [string] };
+  if (mediaCount === 2)
+    return { media_ids: [ids[0], ids[1]] as [string, string] };
+  if (mediaCount === 3)
+    return {
+      media_ids: [ids[0], ids[1], ids[2]] as [string, string, string],
+    };
+  if (mediaCount === 4)
+    return {
+      media_ids: [ids[0], ids[1], ids[2], ids[3]] as [
+        string,
+        string,
+        string,
+        string
+      ],
+    };
+  return undefined;
+};

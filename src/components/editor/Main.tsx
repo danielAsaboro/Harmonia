@@ -754,9 +754,9 @@ export default function PlayGround({
       // Get media data for each tweet
       const tweetsWithMedia = await Promise.all(
         pageContent.tweets.map(async (tweet) => {
-          let mediaUrls: string[] = [];
+          let mediaContent: string[] = [];
           if (tweet.mediaIds && tweet.mediaIds.length > 0) {
-            mediaUrls = await Promise.all(
+            mediaContent = await Promise.all(
               tweet.mediaIds.map(async (mediaId) => {
                 const mediaData = await getMediaFile(mediaId);
                 return mediaData || "";
@@ -765,7 +765,7 @@ export default function PlayGround({
           }
           return {
             content: tweet.content,
-            mediaIds: mediaUrls,
+            mediaContent: mediaContent,
           };
         })
       );
